@@ -18,6 +18,12 @@ object GroupingData {
 
     private val EN = listOf(
         puzzle(
+            GroupingCategory("Types of interview", listOf("Phone", "Panel", "Group", "Mock"), 0),
+            GroupingCategory("Resume sections", listOf("Skills", "Summary", "Education", "References"), 1),
+            GroupingCategory("Work arrangements", listOf("Remote", "Hybrid", "Onsite", "Contract"), 2),
+            GroupingCategory("Job benefits", listOf("Bonus", "Pension", "Insurance", "Leave"), 3),
+        ),
+        puzzle(
             GroupingCategory("Planets", listOf("Earth", "Mars", "Venus", "Saturn"), 0),
             GroupingCategory("___ ball", listOf("Base", "Basket", "Foot", "Volley"), 1),
             GroupingCategory("Citrus fruits", listOf("Lemon", "Lime", "Orange", "Pomelo"), 2),

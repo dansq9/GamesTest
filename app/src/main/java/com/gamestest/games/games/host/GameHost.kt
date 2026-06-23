@@ -25,18 +25,30 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gamestest.games.games.GameId
+import com.gamestest.games.games.clusters.ClustersScreen
 import com.gamestest.games.games.common.Brain
 import com.gamestest.games.games.lightsout.LightsOutScreen
+import com.gamestest.games.games.minicross.MiniCrossScreen
+import com.gamestest.games.games.patches.PatchesScreen
+import com.gamestest.games.games.queens.QueensScreen
 import com.gamestest.games.games.sudoku.SudokuScreen
+import com.gamestest.games.games.tango.TangoScreen
 import com.gamestest.games.games.twenty48.Twenty48Screen
+import com.gamestest.games.games.zip.ZipScreen
 
 @Composable
 fun GameHost(gameId: String, onBack: () -> Unit) {
     when (GameId.byId(gameId)) {
+        GameId.PATCHES -> PatchesScreen(onBack)
         GameId.SUDOKU -> SudokuScreen(onBack)
+        GameId.ZIP -> ZipScreen(onBack)
+        GameId.QUEENS -> QueensScreen(onBack)
+        GameId.TANGO -> TangoScreen(onBack)
         GameId.G2048 -> Twenty48Screen(onBack)
+        GameId.CLUSTERS -> ClustersScreen(onBack)
+        GameId.CROSSWORD -> MiniCrossScreen(onBack)
         GameId.LIGHTSOUT -> LightsOutScreen(onBack)
-        else -> ComingSoon(GameId.byId(gameId)?.title ?: "Game", onBack)
+        null -> ComingSoon("Game", onBack)
     }
 }
 

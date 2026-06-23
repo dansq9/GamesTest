@@ -11,6 +11,7 @@ import com.gamestest.games.games.patches.PatchesScreen
 import com.gamestest.games.games.queens.QueensScreen
 import com.gamestest.games.games.sudoku.SudokuScreen
 import com.gamestest.games.games.tango.TangoScreen
+import com.gamestest.games.games.twenty48.Twenty48Screen
 import com.gamestest.games.games.zip.ZipScreen
 import com.gamestest.games.home.HomeScreen
 
@@ -45,5 +46,6 @@ fun GamesNavGraph() {
         composable(GameId.TANGO.route) { TangoScreen(onBack = { nav.popBackStack() }) }
         composable(GameId.ZIP.route) { ZipScreen(onBack = { nav.popBackStack() }) }
         composable(GameId.PATCHES.route) { PatchesScreen(onBack = { nav.popBackStack() }) }
+        composable(GameId.TWENTY48.route) { Twenty48Screen(onBack = { nav.popBackStack() }) }
     }
 }

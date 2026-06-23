@@ -20,7 +20,7 @@ import kotlin.math.abs
 class ZipViewModel(app: Application) : AndroidViewModel(app) {
 
     private val today = LocalDate.now().toEpochDay()
-    private val puzzle = ZipEngine.generate(Daily.random(today, GameId.ZIP.id), rows = 6, cols = 6, checkpoints = 8)
+    private val puzzle = ZipEngine.generate(Daily.random(today, GameId.ZIP.id), rows = 6, cols = 6, checkpoints = 7)
     val rows = puzzle.rows
     val cols = puzzle.cols
     val numbers: IntArray = puzzle.numbers

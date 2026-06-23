@@ -7,13 +7,18 @@ replaces the old "AI Mock Interview" card and opens the games hub.
 
 ## The games
 
-| Game | Rules | Engine |
-|------|-------|--------|
-| **Mini Sudoku** | 6×6, digits 1–6, 2×3 boxes, no repeats | `SudokuEngine` — backtracking fill + uniqueness-checked hole digging |
-| **Queens** | One crown per row, column & color region; crowns can't touch (incl. diagonally) | `QueensEngine` — valid placement + randomized region growth + solver-verified unique solution |
-| **Tango** | 6×6 suns/moons, equal per row/col, no 3-in-a-row, `=`/`×` edge clues | `TangoEngine` — full-solution generator + minimal unique givens |
-| **Zip** | One path through every cell, visiting numbers 1→N in order | `ZipEngine` — randomized Hamiltonian path + walls inserted until unique |
-| **Patches** | Paint the grid from row/column run clues to reveal a picture | `PatchesEngine` — colored nonogram over job-themed pixel art |
+Display names were chosen to avoid trademark overlap with the puzzles that
+inspired them; the internal `id` (used for storage + daily seeds) is unchanged
+and stays stable.
+
+| Display name | id | Rules | Engine |
+|------|------|-------|--------|
+| **Patches** | `patches` | Paint the grid from row/column run clues to reveal a picture | `PatchesEngine` — colored nonogram over job-themed pixel art |
+| **Sudoku** | `sudoku` | 6×6, digits 1–6, 2×3 boxes, no repeats | `SudokuEngine` — backtracking fill + uniqueness-checked hole digging |
+| **Trail** | `zip` | One path through every cell, visiting numbers 1→7 in order | `ZipEngine` — randomized Hamiltonian path + walls inserted until unique |
+| **Stars** | `queens` | One crown per row, column & colour region; crowns can't touch (incl. diagonally) | `QueensEngine` — valid placement + randomized region growth + solver-verified unique solution |
+| **Eclipse** | `tango` | 6×6 suns/moons, equal per row/col, no 3-in-a-row, `=`/`×` edge clues | `TangoEngine` — full-solution generator + minimal unique givens |
+| **2048** | `2048` | Swipe to slide & merge matching tiles; reach the 2048 tile | `Game2048` — slide/merge engine, daily-seeded tile spawns |
 
 > **Patches note:** LinkedIn's exact "Patches" ruleset isn't pinned down here, so
 > it's implemented as a **colored nonogram / picture-reveal** — the closest

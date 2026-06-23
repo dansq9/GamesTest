@@ -25,6 +25,43 @@ and stays stable.
 > well-defined daily logic puzzle. The art, palette and clue logic are isolated in
 > `PatchesEngine.kt`, so swapping in the final ruleset is a localized change.
 
+## Word & logic engines (NYT-inspired, original + trademark-safe)
+
+A second set of engines lives under `games/<game>/` as **pure Kotlin** (logic +
+generators/solvers, no Android deps), with **no NYT names, word lists, clues,
+archives, or trade dress**. Screens are pending; engines are verified.
+
+| Engine | id | What it does | Legal note |
+|--------|----|--------------|------------|
+| `GuessEngine` | `guess` | 5-letter guess, 6 tries, correct/present/absent (correct duplicate handling) | Wordle *mechanic* isn't patented; we avoid the name/branding/UI/share-format and use our own lists |
+| `GroupingEngine` | `grouping` | 16 words → 4 hidden groups; CORRECT / ONE_AWAY / WRONG | Connections-like idea, original categories/data, no NYT tile reveal style |
+| `LettersEngine` | `letters` | 7 letters, required center, ≥4-letter words, pangrams, scoring | No "Spelling Bee"/bee/honeycomb branding |
+| `WordPathEngine` | `wordpath` | Themed path-search; generator packs theme words + a spanner to cover the grid | Strands-like; original data + name |
+| `MiniCrossEngine` | `minicross` | Small crossword; numbering/entries derived from the grid | Generic mechanic; original grids/clues, no "Mini" branding |
+| `PipsEngine` | `pips` | Domino placement with SUM / EQUAL / DIFFERENT region constraints; solver-verified unique | **Not** Boggle (patented). Domino-logic, original boards/name |
+
+> **Boggle is intentionally excluded** — its grid/timer/adjacency mechanic is patented.
+
+### Content languages
+
+Word/puzzle **content** is locale-selected via `GameLanguage` (Portuguese for
+Brazil, English for South Africa + the rest; English is the fallback). UI
+localization is left to the app's existing layer. Matching is **accent-insensitive**
+(`TextNormalize`) so Portuguese answers like "dança" accept "danca" while the
+accented form is shown. Word lists live in `assets/words/<lang>/` and are loaded
+by `WordRepository`; grouping/word-path/crossword pools are in each game's
+`*Data.kt`. Current data is a **starter set** — expand the assets/pools freely.
+
+> Portuguese mini-crosswords aren't authored yet (the engine supports them; PT
+> currently falls back to the English pool).
+
+### Animations
+
+Engines expose the state transitions the UI needs for smooth animation
+(per-letter `LetterState`s for tile flips, `ONE_AWAY` for shake feedback,
+slide/merge deltas for 2048/Pips, path tracing for Word Path). The actual
+Compose animations will be implemented against your designs.
+
 ## Daily puzzles & streaks
 
 Puzzles are **deterministic by date**: `Daily.seed(epochDay, gameId)` derives a

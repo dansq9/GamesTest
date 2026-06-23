@@ -1,20 +1,16 @@
 package com.gamestest.games.games.sudoku
 
+import android.app.Application
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Backspace
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -26,93 +22,132 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.gamestest.games.core.Daily
 import com.gamestest.games.games.GameId
-import com.gamestest.games.games.common.GameScaffold
-import com.gamestest.games.ui.clickableNoRipple
+import com.gamestest.games.games.common.BaseGameVM
+import com.gamestest.games.games.common.Brain
+import com.gamestest.games.games.common.ControlButton
+import com.gamestest.games.games.common.GameShell
+
+data class SudokuState(val cells: List<Int>, val sel: Int)
+
+class SudokuVM(app: Application) : BaseGameVM<SudokuState>(app, GameId.SUDOKU) {
+    // lazy: BaseGameVM builds initialState() during its own construction, before
+    // these subclass fields would otherwise be initialized.
+    private val puzzle by lazy { SudokuEngine.generate(Daily.random(today, "sudoku")) }
+    val isGiven by lazy { BooleanArray(36) { puzzle.givens[it] != 0 } }
+    private val solution by lazy { puzzle.solution.toList() }
+
+    override fun initialState() = SudokuState(puzzle.givens.toList(), -1)
+    override fun isSolved(s: SudokuState) = s.cells == solution
+
+    fun select(i: Int) { if (!isGiven[i]) set(state.copy(sel = i)) }
+
+    fun place(n: Int) {
+        val i = state.sel
+        if (i < 0 || isGiven[i]) return
+        commit(state.copy(cells = state.cells.toMutableList().also { it[i] = n }))
+    }
+
+    override fun hint() {
+        var t = state.sel
+        if (t < 0 || state.cells[t] != 0) t = state.cells.indexOfFirst { it == 0 }
+        if (t < 0) return
+        commit(state.copy(cells = state.cells.toMutableList().also { it[t] = solution[t] }, sel = t))
+    }
+
+    fun conflicts(): Set<Int> {
+        val cells = state.cells
+        val bad = HashSet<Int>()
+        fun scan(idx: List<Int>) {
+            val seen = HashMap<Int, Int>()
+            for (i in idx) {
+                val v = cells[i]; if (v == 0) continue
+                val p = seen[v]; if (p != null) { bad.add(p); bad.add(i) } else seen[v] = i
+            }
+        }
+        for (r in 0 until 6) scan((0 until 6).map { r * 6 + it })
+        for (c in 0 until 6) scan((0 until 6).map { it * 6 + c })
+        for (br in 0 until 3) for (bc in 0 until 2) {
+            val idx = ArrayList<Int>()
+            for (dr in 0 until 2) for (dc in 0 until 3) idx.add((br * 2 + dr) * 6 + (bc * 3 + dc))
+            scan(idx)
+        }
+        return bad
+    }
+}
 
 @Composable
-fun SudokuScreen(onBack: () -> Unit, vm: SudokuViewModel = viewModel()) {
-    val accent = GameId.SUDOKU.accent
-    val conflicts = vm.conflicts()
-
-    GameScaffold(
-        title = GameId.SUDOKU.title,
-        accent = accent,
-        rules = "Fill every row, column and 2×3 box with the digits 1–6, no repeats.",
-        elapsed = vm.elapsed,
-        streak = vm.streak,
-        solved = vm.solved,
+fun SudokuScreen(onBack: () -> Unit, vm: SudokuVM = viewModel()) {
+    GameShell(
+        vm = vm,
+        controls = listOf(
+            ControlButton("Undo", vm.canUndo, vm::undo),
+            ControlButton("Redo", vm.canRedo, vm::redo),
+            ControlButton("Hint", true, vm::hint),
+            ControlButton("Reset", true, vm::reset),
+        ),
+        hint = vm.game.rules[1],
         onBack = onBack,
-        onReset = vm::reset,
-        controls = { NumberPad(accent, vm) }
+        shareGrid = { Text("6", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 64.sp) },
     ) {
-        SudokuBoard(vm, accent, conflicts)
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Board(vm)
+            Spacer16()
+            NumberPad(vm)
+        }
     }
 }
 
 @Composable
-private fun SudokuBoard(vm: SudokuViewModel, accent: Color, conflicts: Set<Int>) {
-    val n = vm.n
-    val line = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f)
-    val thick = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+private fun Spacer16() = Box(Modifier.size(18.dp))
 
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth().padding(4.dp)
-    ) {
-        Column(
-            Modifier
-                .aspectRatio(1f)
-                .drawBehind {
-                    val cw = size.width / n
-                    val ch = size.height / n
-                    for (i in 0..n) {
-                        val sw = if (i % SudokuPuzzle.BOX_W == 0) 3f else 1f
-                        drawLine(thick.takeIf { i % SudokuPuzzle.BOX_W == 0 } ?: line,
-                            Offset(i * cw, 0f), Offset(i * cw, size.height), sw)
-                    }
-                    for (j in 0..n) {
-                        val sw = if (j % SudokuPuzzle.BOX_H == 0) 3f else 1f
-                        drawLine(thick.takeIf { j % SudokuPuzzle.BOX_H == 0 } ?: line,
-                            Offset(0f, j * ch), Offset(size.width, j * ch), sw)
-                    }
+@Composable
+private fun Board(vm: SudokuVM) {
+    val conflicts = vm.conflicts()
+    val thin = Color(0xFFE7E9EC)
+    val thick = Color(0xFF16181C)
+    Column(
+        Modifier
+            .width(306.dp)
+            .aspectRatio(1f)
+            .background(Brain.Card, RoundedCornerShape(10.dp))
+            .drawBehind {
+                val cw = size.width / 6
+                for (i in 0..6) {
+                    val major = i % 3 == 0
+                    drawLine(if (major) thick else thin, Offset(i * cw, 0f), Offset(i * cw, size.height), if (major) 3f else 1f)
                 }
-        ) {
-            for (r in 0 until n) {
-                Row(Modifier.weight(1f)) {
-                    for (c in 0 until n) {
-                        val idx = r * n + c
-                        val v = vm.cells[idx]
-                        val isSel = vm.selected == idx
-                        val bg = when {
-                            idx in conflicts -> Color(0xFFFFCDD2)
-                            isSel -> accent.copy(alpha = 0.18f)
-                            vm.isGiven[idx] -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                            else -> Color.Transparent
-                        }
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .aspectRatio(1f)
-                                .background(bg)
-                                .clickableNoRipple { vm.select(idx) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (v != 0) {
-                                Text(
-                                    "$v",
-                                    fontSize = 22.sp,
-                                    fontWeight = if (vm.isGiven[idx]) FontWeight.Bold else FontWeight.Medium,
-                                    color = when {
-                                        idx in conflicts -> Color(0xFFC62828)
-                                        vm.isGiven[idx] -> MaterialTheme.colorScheme.onSurface
-                                        else -> accent
-                                    }
-                                )
+                for (j in 0..6) {
+                    val major = j % 2 == 0
+                    drawLine(if (major) thick else thin, Offset(0f, j * cw), Offset(size.width, j * cw), if (major) 3f else 1f)
+                }
+            }
+    ) {
+        for (r in 0 until 6) {
+            Row(Modifier.weight(1f)) {
+                for (c in 0 until 6) {
+                    val i = r * 6 + c
+                    val v = vm.state.cells[i]
+                    val sel = vm.state.sel == i
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .aspectRatio(1f)
+                            .background(if (sel) Brain.Sel else Color.Transparent)
+                            .clickable { vm.select(i) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (v != 0) Text(
+                            "$v",
+                            fontSize = 22.sp,
+                            fontWeight = if (vm.isGiven[i]) FontWeight.Black else FontWeight.Bold,
+                            color = when {
+                                i in conflicts -> Brain.Red
+                                vm.isGiven[i] -> Brain.Ink
+                                else -> Brain.Blue
                             }
-                        }
+                        )
                     }
                 }
             }
@@ -121,30 +156,21 @@ private fun SudokuBoard(vm: SudokuViewModel, accent: Color, conflicts: Set<Int>)
 }
 
 @Composable
-private fun NumberPad(accent: Color, vm: SudokuViewModel) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        for (v in 1..vm.n) {
-            Surface(
-                modifier = Modifier.weight(1f).clickableNoRipple { vm.input(v) },
-                shape = RoundedCornerShape(12.dp),
-                color = accent.copy(alpha = 0.12f)
-            ) {
-                Box(Modifier.padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
-                    Text("$v", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = accent)
-                }
-            }
+private fun NumberPad(vm: SudokuVM) {
+    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+        for (n in 1..6) {
+            Box(
+                Modifier.size(width = 40.dp, height = 48.dp)
+                    .background(Brain.BlueSoft, RoundedCornerShape(11.dp))
+                    .clickable { vm.place(n) },
+                contentAlignment = Alignment.Center
+            ) { Text("$n", color = Brain.Blue, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp) }
         }
-        Surface(
-            modifier = Modifier.size(56.dp).clickableNoRipple { vm.erase() },
-            shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.AutoMirrored.Filled.Backspace, contentDescription = "Erase")
-            }
-        }
+        Box(
+            Modifier.size(width = 40.dp, height = 48.dp)
+                .background(Brain.Chip, RoundedCornerShape(11.dp))
+                .clickable { vm.place(0) },
+            contentAlignment = Alignment.Center
+        ) { Text("⌫", color = Brain.ChipInk, fontSize = 18.sp) }
     }
 }

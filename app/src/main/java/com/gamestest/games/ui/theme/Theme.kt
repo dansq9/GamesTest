@@ -54,9 +54,9 @@ fun GamesTestTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colors.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars =
-                colors.primary.luminance() > 0.5f
+            // Edge-to-edge: transparent bars; white headers want dark status icons.
+            window.statusBarColor = Color.Transparent.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
     MaterialTheme(

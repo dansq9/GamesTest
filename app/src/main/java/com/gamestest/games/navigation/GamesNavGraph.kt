@@ -2,50 +2,42 @@ package com.gamestest.games.navigation
 
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.gamestest.games.games.GameId
+import androidx.navigation.navArgument
 import com.gamestest.games.games.GamesHubScreen
-import com.gamestest.games.games.patches.PatchesScreen
-import com.gamestest.games.games.queens.QueensScreen
-import com.gamestest.games.games.sudoku.SudokuScreen
-import com.gamestest.games.games.tango.TangoScreen
-import com.gamestest.games.games.twenty48.Twenty48Screen
-import com.gamestest.games.games.zip.ZipScreen
-import com.gamestest.games.home.HomeScreen
+import com.gamestest.games.games.host.GameHost
 
 object Routes {
-    const val HOME = "home"
     const val HUB = "hub"
+    const val GAME = "game/{id}"
+    fun game(id: String) = "game/$id"
 }
 
 @Composable
-fun GamesNavGraph() {
+fun GamesNavGraph(onExit: () -> Unit) {
     val nav = rememberNavController()
-
     NavHost(
         navController = nav,
-        startDestination = Routes.HOME,
+        startDestination = Routes.HUB,
         enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start) },
         exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start) },
         popEnterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End) },
         popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End) },
     ) {
-        composable(Routes.HOME) {
-            HomeScreen(onOpenGames = { nav.navigate(Routes.HUB) })
-        }
         composable(Routes.HUB) {
-            GamesHubScreen(
-                onBack = { nav.popBackStack() },
-                onOpenGame = { game -> nav.navigate(game.route) }
+            GamesHubScreen(onBack = onExit, onOpenGame = { id -> nav.navigate(Routes.game(id)) })
+        }
+        composable(
+            Routes.GAME,
+            arguments = listOf(navArgument("id") { type = NavType.StringType })
+        ) { entry ->
+            GameHost(
+                gameId = entry.arguments?.getString("id").orEmpty(),
+                onBack = { nav.popBackStack() }
             )
         }
-        composable(GameId.SUDOKU.route) { SudokuScreen(onBack = { nav.popBackStack() }) }
-        composable(GameId.QUEENS.route) { QueensScreen(onBack = { nav.popBackStack() }) }
-        composable(GameId.TANGO.route) { TangoScreen(onBack = { nav.popBackStack() }) }
-        composable(GameId.ZIP.route) { ZipScreen(onBack = { nav.popBackStack() }) }
-        composable(GameId.PATCHES.route) { PatchesScreen(onBack = { nav.popBackStack() }) }
-        composable(GameId.TWENTY48.route) { Twenty48Screen(onBack = { nav.popBackStack() }) }
     }
 }

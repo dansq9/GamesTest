@@ -14,7 +14,7 @@ class GameProgress private constructor(context: Context) {
     private val prefs = context.applicationContext
         .getSharedPreferences("games_progress", Context.MODE_PRIVATE)
 
-    data class Stats(val streak: Int, val bestSeconds: Int, val doneToday: Boolean)
+    data class Stats(val streak: Int, val bestSeconds: Int, val doneToday: Boolean, val bestScore: Int)
 
     fun stats(gameId: String, today: Long = LocalDate.now().toEpochDay()): Stats {
         val last = prefs.getLong(key(gameId, "last"), Long.MIN_VALUE)
@@ -23,8 +23,16 @@ class GameProgress private constructor(context: Context) {
         return Stats(
             streak = if (last == today || last == today - 1) streak else 0,
             bestSeconds = best,
-            doneToday = last == today
+            doneToday = last == today,
+            bestScore = prefs.getInt(key(gameId, "bestScore"), 0),
         )
+    }
+
+    /** For score-based games (2048): keep the best score regardless of solve. */
+    fun recordScore(gameId: String, score: Int) {
+        if (score > prefs.getInt(key(gameId, "bestScore"), 0)) {
+            prefs.edit().putInt(key(gameId, "bestScore"), score).apply()
+        }
     }
 
     /** Record a solve for [today]; updates streak (consecutive days) and best time. */

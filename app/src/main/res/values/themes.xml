@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base theme; Compose drives the real styling. We use a Material3 splash-friendly
+         base and let Compose handle status bar coloring via the theme. -->
+    <style name="Theme.GamesTest" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@color/brand_blue</item>
+        <item name="android:windowBackground">@color/app_background</item>
+    </style>
+</resources>

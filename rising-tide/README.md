@@ -28,12 +28,13 @@ npm test            # node:test over the type-stripped .ts suite
 npm run build       # tsc -> dist/ (compiled JS + declarations)
 ```
 
-## Status — E0–E3 complete (80 tests green)
+## Status — E0–E4 complete (93 tests green)
 
 **E0** (spec `13`): *seed ⇒ byte-identical game, proven by test.* ✅
 **E1** (spec `13`): *the safety floor — no unavoidable deaths.* ✅
 **E2** (spec `13`): *three fairness modes; Guided globally un-losable; seeded daily replay.* ✅
 **E3** (content): *40 levels, 7 goal types, elements, combos, specials, anchor locks, power-ups, DDA.* ✅
+**E4** (economy): *star-band resolution + pearl economy + daily streak/freeze.* ✅ — the last pure-logic phase.
 - E3a: 40-level table + all 7 goal types + core elements (barnacle/coral/pearl/bonus).
 - E3b: combo one-move grace + combo-earned specials + the two special blocks.
 - E3c: anchor locks + power-up satchel (Undo / +Moves / Tide-Push).
@@ -72,6 +73,15 @@ Implemented and tested:
 - **Power-ups** (E3c, spec `10 §3`) — the satchel: **Undo-Last** (one-deep rewind via
   snapshot/restore; disabled in Seeded), **+Moves** (grant 5), **Tide-Push** (lower tide by 2),
   used via `usePowerUp`.
+- **Star bands** (E4, spec `09`) — `resolveStars` (`starbands.ts`): one metric per goal dispatched by
+  goal-type then move-limit (survive→tide margin, score→rate, move-limited→movesUsed, gather→
+  moves-to-win, unlimited→end-fill). Resolved at win-time; the design-time cutoffs are refit by the E7
+  sim and can be frozen into `LevelDef.starBands`. The engine pays 30/20/10 pearls per 3/2/1★ in the
+  `won` event.
+- **Economy** (E4, spec `10`) — the per-player pearl wallet, streak, and freeze tokens (`economy.ts`,
+  pure functions the host owns, like the DDA profile): star payouts, milestone bonuses (30/40/50/75),
+  First-Win-of-Day, the daily streak (breaks after 3 missed days, held by a freeze token, capped at 4),
+  and streak chests (75/150/300/600 at day 3/7/14/30).
 - **DDA** (E3d, spec `11`) — player-adaptive difficulty (`dda.ts`). Four behavioral signals
   (`PlayerProfile`) drive three dials (gap-fill boost, pressure modulation, comfort mode after a
   loss streak). Asymmetric — helps struggling players far more than it challenges strong ones — and
@@ -106,14 +116,13 @@ scale — the full N ≥ 1e6 CasualBot certification is E7.
 | **E3b** | Combo one-move grace, special blocks (Line-Blaster, Bomb), combo-earned specials | ✅ done |
 | **E3c** | Anchor locks + power-up satchel (Undo / +Moves / Tide-Push) | ✅ done |
 | **E3d** | DDA system (player-adaptive difficulty), reconciled with determinism | ✅ done |
-| E4 | Economy, star-band resolution, streaks, monetization wiring | next |
+| **E4** | Economy, star-band resolution, streaks, monetization wiring | ✅ done |
+| E5 | Canvas 2D UI (Claude Design) | next (parallel) |
+| E6 | Capacitor shell + AdMob | |
+| E7 | Simulation harness (CasualBot), CI gates G1–G16, difficulty calibration | |
 
 > Tier-B elements `current` (drift / tray-bias) and `storm` (turn-timed events) stay gated off until
 > the E7 headless sim certifies the safety floor holds with them present (spec `04 §1.6–1.7`).
-| E4 | Economy, star-band resolution, streaks, monetization wiring | |
-| E5 | Canvas 2D UI (Claude Design) | |
-| E6 | Capacitor shell + AdMob | |
-| E7 | Simulation harness (CasualBot), CI gates G1–G16, difficulty calibration | |
 
 > E1 delivered **per-hand** safety (every hand has an out); E2 adds the Guided **global** un-losable
 > promise (rescue rule + fill ceiling). The full N ≥ 1e6 CasualBot zero-death certification and the

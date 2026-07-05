@@ -25,6 +25,9 @@ import { COLORS } from './pieces.ts';
 import { computeDDA, NEUTRAL_PROFILE } from './dda.ts';
 import { contextFor, generateTray, type GenContext } from './generator.ts';
 import { resolveClearedCells, resolveClears, seedElements, type ClearResolution } from './elements.ts';
+import { fillPct } from './board.ts';
+import { resolveStars } from './starbands.ts';
+import { milestoneBonus, starPearls } from './economy.ts';
 import { applyTide, TIDE_CAP } from './tide.ts';
 import { levelById } from './levels.ts';
 import {
@@ -217,6 +220,7 @@ export class RisingTideEngine {
       s.tidePhase = next.tidePhase;
       s.tideRises = next.tideRises;
       s.prevTideFloor = next.prevTideFloor;
+      if (s.tide > s.maxTide) s.maxTide = s.tide; // run-peak, for the survive star metric
       events.push({ type: 'tideRise', tide: s.tide, phase: s.tidePhase, rises: s.tideRises });
     }
 
@@ -253,8 +257,10 @@ export class RisingTideEngine {
     // 10. Terminals — WIN is checked before loss (spec 02 §3 terminal rule).
     if (this.#goalMet()) {
       s.status = 'won';
-      s.stars = 3; // PLACEHOLDER — star-band resolution is E4 (spec 09). Default cozy 3★ for now.
-      const rewards: Reward[] = [];
+      s.stars = this.#resolveStars();
+      const pearls = starPearls(s.stars) + milestoneBonus(s.level?.n, s.level?.milestone);
+      const rewards: Reward[] = [{ kind: 'pearls', amount: pearls }];
+      if (s.level?.milestone) rewards.push({ kind: 'chapterUnlock' });
       events.push({ type: 'won', stars: s.stars, rewards, nextName: s.level?.nextName });
     } else {
       const drowned = this.#tideActive() && s.tide >= TIDE_CAP;
@@ -304,6 +310,24 @@ export class RisingTideEngine {
 
   #goalMet(): boolean {
     return this.#state.goal ? this.#goalProgressValue() >= this.#state.goalTarget : false;
+  }
+
+  /** Resolve 3/2/1 stars for a just-won level (spec 09). Endless/no-level wins default to 3★. */
+  #resolveStars(): number {
+    const s = this.#state;
+    if (!s.level || !s.goal) return 3;
+    return resolveStars(s.level, {
+      goal: s.goal,
+      chapter: s.level.chapter,
+      target: s.goalTarget,
+      moveLimit: s.moveLimit,
+      movesUsed: s.movesUsed,
+      maxTide: s.maxTide,
+      endFillPct: fillPct(s.board),
+      score: s.score,
+      turns: s.turns,
+      hasBonus: (s.level.elements ?? []).some((e) => e.kind === 'bonus'),
+    }).stars;
   }
 
   #tideActive(): boolean {

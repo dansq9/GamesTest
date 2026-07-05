@@ -5,6 +5,7 @@
 
 import type { ColorId } from './pieces.ts';
 import type { DdaDeltas, PlayerProfile } from './dda.ts';
+import type { StarBands } from './starbands.ts';
 
 export type { ColorId };
 
@@ -64,6 +65,7 @@ export interface LevelDef {
   elements?: ElementSpec[];
   milestone?: boolean;
   teachAssist?: boolean; // +teachBonus to gap-fill where the assist IS the lesson (spec 01 §3a)
+  starBands?: StarBands; // sim-fitted star cutoffs (spec 09 §4); omitted → design-time seeds
   seedPolicy?: 'none' | 'date' | 'attempt';
 }
 
@@ -129,6 +131,7 @@ export interface GameState {
   tidePhase: TidePhase;
   tideRises: number; // integer upward crossings; never decreases
   prevTideFloor: number; // internal accrual cursor
+  maxTide: number; // run-peak tide (drives the survive star metric, spec 09 §1.4)
 
   // level / goal
   level?: LevelDef;
@@ -207,6 +210,7 @@ export function blankState(surface: Surface, fairness: Fairness, seed: string, g
     tidePhase: 'calm',
     tideRises: 0,
     prevTideFloor: 0,
+    maxTide: 0,
     goalProgress: 0,
     goalTarget: 0,
     movesUsed: 0,

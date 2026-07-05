@@ -187,5 +187,5 @@ more ad impressions = more revenue.** The engine emits the events; the host rend
 | AD3 $ | First-session ad immunity window | 3 sessions or 5 levels, whichever later |
 | AD4 $ | Remove-ads IAP price | $4.99–$9.99 one-time |
 | AD5 $ | Ad network selection | AdMob mediation + quality filters |
-| AD6 $ | Banner on gameplay board? | **NO — non-negotiable** |
+| AD6 $ | Banner on gameplay board? | **YES — persistent bottom strip** (product-owner direction; Block Blast model, see §1.3) |
 | AD7 $ | Feedback text/haptic calibration | UI-layer; calibrate in playtest |

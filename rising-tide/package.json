@@ -1,0 +1,36 @@
+{
+  "name": "@risingtide/engine",
+  "version": "0.0.1",
+  "description": "Rising Tide — pure, deterministic, UI-agnostic game engine (state, command) -> (state', events[]).",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "test": "node --experimental-strip-types --test 'test/*.test.ts'",
+    "test:watch": "node --experimental-strip-types --watch --test 'test/*.test.ts'"
+  },
+  "keywords": [
+    "puzzle",
+    "block",
+    "game-engine",
+    "deterministic"
+  ],
+  "license": "UNLICENSED",
+  "private": true,
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "typescript": "^5.9.3"
+  }
+}

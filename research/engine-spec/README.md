@@ -37,6 +37,7 @@ economy, DDA, and ad decisions (section H). This is the list to rule on.
 | [`11-dda-system.md`](11-dda-system.md) | Engine Engineer + Systems | Dynamic Difficulty Adjustment — player-adaptive gap-fill, pressure dial, comfort mode; preserves determinism |
 | [`12-ad-strategy.md`](12-ad-strategy.md) | Monetization Designer | Ad placement strategy, format mix (RV/interstitial/banner), first-session policy, remove-ads IAP, feedback hooks |
 | [`13-implementation-guide.md`](13-implementation-guide.md) | Engineering Lead | Technology stack recommendation (TypeScript + Canvas + Capacitor), build phases E0–E7, Claude Code session context |
+| [`14-ux-reference-block-blast.md`](14-ux-reference-block-blast.md) | Claude Design | Block Blast UX patterns → Rising Tide mapping, adopt/diverge table, UI-research image usage |
 
 ## The non-negotiables (the product's spine)
 
@@ -50,7 +51,7 @@ economy, DDA, and ad decisions (section H). This is the list to rule on.
 ## Status
 
 - Seven core specialist specs complete and cross-reconciled.
-- Five extended specs (star-bands, economy, DDA, ad strategy, implementation guide) complete and cross-reviewed.
+- Six extended specs (star-bands, economy, DDA, ad strategy, implementation guide, UX reference) complete and cross-reviewed.
 - Persona Advocate second review: **conditional GO** on star-bands + economy (3 adjustments applied).
 - Cross-spec consistency review: **CONSISTENT** across all 12 docs (9 minor adjustments applied).
 - One content pass outstanding: the Chapter-3 re-order (`08 D6`).

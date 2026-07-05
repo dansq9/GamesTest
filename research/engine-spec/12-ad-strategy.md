@@ -61,20 +61,28 @@ just won), opt-in, and never gates progression. **[OPEN — product owner: appro
 - **First-session immunity:** no interstitials in the **first 3 sessions or first 5 levels** (whichever
   comes later). Let her fall in love with the calm board before any monetization friction.
 
-### 1.3 Native banner — menus and lobbies only
+### 1.3 Persistent banner — always-on including gameplay
+
+Following the Block Blast model (which generates ~55% of revenue from banners at 70M DAU):
 
 | Screen | Banner position | Notes |
 |---|---|---|
-| Chapter map | Bottom of screen | Standard 320×50 or adaptive |
-| Pearl store | Bottom of screen | She's already in a commercial context |
+| **Gameplay board** | **Bottom of screen, below the tray** | Standard 320×50 or adaptive. Positioned below the piece tray so it never overlaps the 8×8 grid or gameplay controls. The banner is part of the persistent layout, not a pop-in. |
+| Chapter map | Bottom of screen | Standard |
+| Pearl store | Bottom of screen | Commercial context |
 | Cosmetics browser | Bottom of screen | Same |
-| Daily Tide lobby | Bottom of screen | Before she enters the board |
+| Daily Tide lobby | Bottom of screen | Before board entry |
+| Level-win celebration | Bottom of screen | Persists through the celebration |
 | Settings / profile | Bottom of screen | Low-traffic but always-on |
 
-**NEVER on the gameplay board.** The 8×8 grid, the tray, the tide meter, the score — no banner
-touches any of these. The board is sacred calm space.
+**Layout rule:** the banner occupies a fixed bottom strip that the UI accounts for from the start —
+the game grid, tray, and tide meter are laid out *above* it, never clipped. Because it's persistent
+and never pops in or out, it reads as part of the screen furniture, not an interruption. Block Blast
+proves this works: a persistent bottom banner that the player stops noticing after session 2.
 
-**NEVER on the level-win celebration.** That moment belongs to her; an ad there undercuts the dopamine.
+**Removed from initial spec draft:** the recommendation to exclude banners from gameplay has been
+overridden per product owner direction. Block Blast's ad model works at scale, and always-on banners
+are a proven, low-friction revenue backbone for this genre.
 
 ---
 
@@ -135,15 +143,18 @@ ads** — this is a retention driver, not a monetization leak:
 
 | Format | Est. share | CPM range | Notes |
 |---|---|---|---|
-| Rewarded Video | **~45–50%** | $15–$40 | Highest CPM; opt-in, high intent |
-| Interstitial | **~30–35%** | $8–$20 | At session seams only |
-| Native banner | **~15–20%** | $1–$5 | Always-on, menus only |
+| Persistent banner | **~45–55%** | $1–$5 | Always-on during gameplay + menus. Low CPM but 100% fill, every session |
+| Interstitial | **~25–35%** | $8–$20 | Between levels + after Endless/Daily sessions |
+| Rewarded Video | **~15–25%** | $15–$40 | Highest CPM; opt-in, high intent |
 | **IAP** | varies | n/a | Remove-ads, pearl packs, cosmetic packs, move/continue tokens |
 
-**ARPDAU projection [OPEN]:** with the conservative ad mix (fewer impressions, higher CPM), estimate
-**$0.04–$0.08 ARPDAU** from ads alone. IAP adds **$0.02–$0.06** for a blended **$0.06–$0.14 ARPDAU**.
-Significantly higher per-user than Block Blast's $0.008, but on a smaller DAU base. The 45–65 demo
-monetizes per-user better than mass-market.
+**Revenue mix mirrors Block Blast's proven model** (55/35/10 banner/interstitial/RV). The persistent
+banner is the backbone — low CPM but always earning. Interstitials at session seams add mid-range CPM.
+RV is the premium tier — fewer impressions but highest per-impression value.
+
+**ARPDAU projection [OPEN]:** at scale, estimate **$0.008–$0.015 ARPDAU** from ads (matching Block
+Blast's range). IAP adds **$0.02–$0.06** for a blended **$0.03–$0.07 ARPDAU**. The 45–65 demo
+over-indexes on IAP relative to younger cohorts.
 
 ---
 

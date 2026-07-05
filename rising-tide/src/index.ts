@@ -10,8 +10,9 @@ export * as board from './board.ts';
 export { scorePlacement } from './scoring.ts';
 export { applyTide, phaseFor, riseFor, TIDE_CAP } from './tide.ts';
 export { generateTray, contextFor, type GenContext } from './generator.ts';
-export { handIsSafe, handCanClear, safeFallbackShapes } from './solvability.ts';
-export { assistFor, noFloodFor, type Assist } from './assist.ts';
+export { handIsSafe, handCanClear, minEndFill, safeFallbackShapes } from './solvability.ts';
+export { assistFor, noFloodFor, pGap, pressureForChapter, type Assist, type AssistInput } from './assist.ts';
+export { dailySeed, utcDateString } from './daily.ts';
 export {
   BOARD_SIZE,
   blankState,

@@ -248,7 +248,16 @@ export class RisingTideEngine {
   }
 
   #genCtx(s: GameState): GenContext {
-    return contextFor(s.surface, s.fairness, this.#rng);
+    return contextFor({
+      surface: s.surface,
+      fairness: s.fairness,
+      chapter: s.level?.chapter,
+      levelNumber: s.level?.n,
+      milestone: s.level?.milestone,
+      teach: s.level?.teachAssist,
+      gamesPlayed: s.gamesPlayed,
+      rng: this.#rng,
+    });
   }
 
   // ── monetization hooks (spec 02 §8) ─────────────────────────────────────────

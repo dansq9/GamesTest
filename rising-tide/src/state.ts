@@ -46,6 +46,7 @@ export interface LevelDef {
   id: string;
   name: string;
   nextName?: string;
+  n?: number; // level ordinal 1..40 — the assist-fade curve keys on this (spec 01 §3)
   chapter: string; // 'shallows' | 'reef' | 'deep' | 'openwater' | 'endless'
   goal: GoalType;
   target: number;
@@ -54,6 +55,7 @@ export interface LevelDef {
   tideRate?: number; // per-level tide multiplier (spec 01 §5); default 1.0
   elements?: ElementSpec[];
   milestone?: boolean;
+  teachAssist?: boolean; // +teachBonus to gap-fill where the assist IS the lesson (spec 01 §3a)
   seedPolicy?: 'none' | 'date' | 'attempt';
 }
 

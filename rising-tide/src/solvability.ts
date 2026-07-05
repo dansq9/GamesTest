@@ -67,9 +67,38 @@ export function handIsSafe(board: Board, shapes: readonly Piece[]): boolean {
   return dfs(board, shapes, false, false);
 }
 
-/** True iff some safe witness sequence also clears ≥1 line (Guided rescue basis; E2). */
+/** True iff some safe witness sequence also clears ≥1 line (Guided rescue basis; spec 03 §4.3). */
 export function handCanClear(board: Board, shapes: readonly Piece[]): boolean {
   return dfs(board, shapes, true, false);
+}
+
+/**
+ * Minimum achievable end-of-hand FILLED-cell count over all safe placement sequences (spec 03 §4.3
+ * fill ceiling). Returns Infinity if the hand is not safe (no full sequence exists). Used by the
+ * Guided fill ceiling to reject hands that would ratchet the board past F_cap.
+ */
+export function minEndFill(board: Board, shapes: readonly Piece[]): number {
+  return dfsMinFill(board, shapes);
+}
+
+function dfsMinFill(board: Board, remaining: readonly Piece[]): number {
+  if (remaining.length === 0) return countFilled(board);
+  let best = Infinity;
+  const seenShapes = new Set<string>();
+  for (let i = 0; i < remaining.length; i++) {
+    const p = remaining[i]!;
+    if (seenShapes.has(p.id)) continue;
+    seenShapes.add(p.id);
+    const moves = legalMoves(board, p.cells);
+    if (moves.length === 0) continue;
+    const rest = remaining.slice(0, i).concat(remaining.slice(i + 1));
+    for (const [r, c] of moves) {
+      const next = simulatePlaceAndClear(board, p.cells, r, c);
+      const got = dfsMinFill(next, rest);
+      if (got < best) best = got;
+    }
+  }
+  return best;
 }
 
 /**

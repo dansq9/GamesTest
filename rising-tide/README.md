@@ -28,10 +28,11 @@ npm test            # node:test over the type-stripped .ts suite
 npm run build       # tsc -> dist/ (compiled JS + declarations)
 ```
 
-## Status — E0 + E1 complete (29 tests green)
+## Status — E0 + E1 + E2 complete (39 tests green)
 
 **E0 ship criterion** (spec `13`): *seed ⇒ byte-identical game, proven by test.* ✅
 **E1 ship criterion** (spec `13`): *the safety floor — no unavoidable deaths.* ✅
+**E2 ship criterion** (spec `13`): *three fairness modes; Guided globally un-losable; seeded daily replay.* ✅
 
 Implemented and tested:
 - **RNG** (`rng.ts`) — mulberry32 + FNV-1a, integer-exact, the single randomness source. State-based
@@ -46,16 +47,24 @@ Implemented and tested:
 - **Generator** (`generator.ts`) — the `ContextualGenerator`: weighted roulette + pressure dial +
   no-flood + gap-fill, in the frozen draw order (spec `03 §1.2`), validated by the safety floor so it
   serves a safe hand whenever one exists (spec `03 §2.6`).
-- **Assist** (`assist.ts`) — E1 per-surface/fairness posture. **Zen = genuinely calmer** (kindest
-  pressure dial + light gap-fill, no goal/tide), not inflated targets.
+- **Assist** (`assist.ts`) — the data-driven assist-fade curve (spec `01 §3`): gap-fill `p_gap(L)`
+  fading to 0 by L13 with teach/milestone bonuses; pressure `s_p` per chapter (1.0→0.4, never 0).
+  **Zen = genuinely calmer** (kindest pressure + light non-fading gap-fill, no goal/tide), not
+  inflated targets.
+- **Generator** (`generator.ts`) — additionally enforces the **Guided rescue rule + fill ceiling**
+  (spec `03 §4.3`): at/above `F_rescue`=0.72 the served hand must be *clearing* and within
+  `F_cap`=0.80, so the board can never ratchet into a dead state.
+- **Daily** (`daily.ts`) — date-based Daily Tide seed (spec `03 §1.3`); one board worldwide.
 - **Engine** (`engine.ts`) — the turn loop with canonical event ordering, goals (`lines`/`score`/
   `survive`), win-before-loss terminals, snapshot/restore, and the monetization hooks
   (`grantMoves`/`pushTide`/`continueAfterLoss`/`rerollTray`).
 
 **Proven by the suite:** same seed ⇒ identical event stream (golden-master); seeds diverge;
-restore-then-play == continuous play; snapshots are detached captures; and **every served hand is safe
-across 1,600 random-legal games** (guided/fair/zen) with no-flood holding throughout — the T3/T4/T5
-invariants (spec `03 §7`) at a fast CI scale.
+restore-then-play == continuous play; snapshots are detached captures; **every served hand is safe
+across 1,600 random-legal games** (guided/fair/zen) with no-flood holding (T3/T4/T5); the assist
+curve matches spec; **a Guided hand at/above F_rescue can always clear**; **a competent player suffers
+zero no-moves losses in Guided**; and the daily seed replays identically for all players. Fast CI
+scale — the full N ≥ 1e6 CasualBot certification is E7.
 
 ## Roadmap (spec `13`, phases E0–E7)
 
@@ -63,16 +72,16 @@ invariants (spec `03 §7`) at a fast CI scale.
 |---|---|---|
 | **E0** | Determinism skeleton + golden-master | ✅ done |
 | **E1** | Solvability floor (`handIsSafe` DFS), `ContextualGenerator`, no-flood, gap-fill | ✅ done |
-| E2 | Fairness modes (guided/fair/seeded), assist-fade curve, **Guided rescue rule + fill ceiling**, daily seed | next |
-| E3 | 40-level content, board elements, combo/specials, satchel, DDA | |
+| **E2** | Fairness modes (guided/fair/seeded), assist-fade curve, **Guided rescue rule + fill ceiling**, daily seed | ✅ done |
+| E3 | 40-level content, board elements, combo/specials, satchel, DDA | next |
 | E4 | Economy, star-band resolution, streaks, monetization wiring | |
 | E5 | Canvas 2D UI (Claude Design) | |
 | E6 | Capacitor shell + AdMob | |
 | E7 | Simulation harness (CasualBot), CI gates G1–G16, difficulty calibration | |
 
-> E1 delivers **per-hand** safety (every hand has an out). The Guided **global** "un-losable" promise
-> (rescue rule + fill ceiling, spec `03 §4.3`) and the full N ≥ 1e6 zero-death certification (spec `07`)
-> land in E2/E7.
+> E1 delivered **per-hand** safety (every hand has an out); E2 adds the Guided **global** un-losable
+> promise (rescue rule + fill ceiling). The full N ≥ 1e6 CasualBot zero-death certification and the
+> level goal-achievability solver (spec `07`, `03 §5`) land in E7.
 
 ## Spec-reconciliation notes (from the build-readiness + decision audits)
 
@@ -89,9 +98,14 @@ match. Tracked so the spec and code stay in sync:
 3. **Piece library.** The canonical 18-shape set + weights live in the prototype `_genTray`, which is
    not in this repo. `pieces.ts` ships the standard genre set as a swappable placeholder tagged
    `[OPEN — reconcile against prototype]`. Does not affect engine logic.
-4. **E-phase placeholders in E0 code**, all marked inline: `stars = 3` (real star-bands are E4/spec
-   `09`); no board elements (E3); no solvability floor or gap-fill (E1); `continueAfterLoss` on no-moves
-   regenerates a normal tray (E1 makes it guaranteed-safe).
+4. **Assist curve — table vs formula (E2).** Spec `01 §3a` gives both a formula
+   (`p_base = clamp(0.60 − 0.05·(L−1))`) and a lookup table; they disagree at L11/L12 (table .05/.00,
+   formula .10/.05). We follow the **formula** (matches the prose "hits 0 at L=13"). → reconcile the
+   spec table to the formula.
+5. **E-phase placeholders still open**, marked inline: `stars = 3` (real star-bands are E4/spec
+   `09`); no board elements (E3); `continueAfterLoss` on no-moves regenerates a normal tray (should be
+   guaranteed-safe — cheap follow-up); the Guided fill-ceiling fallback preserves per-hand safety but
+   not always the clearing property on rare boards (safety still holds — no unavoidable death).
 
 Deferred audit blockers not touched by E0, for later phases: DDA↔determinism reconciliation (B2 — DDA
 inputs must live in serialized state or be off in seeded/ranked, per spec `11`); the ~10 E3 state fields

@@ -108,6 +108,27 @@ export function clearLines(board: Board, rows: number[], cols: number[]): { boar
   return { board: next, cleared };
 }
 
+/** All cells of row r and column c (the Line-Blaster cross), deduped. */
+export function rowColCells(r: number, c: number): [number, number][] {
+  const cells: [number, number][] = [];
+  for (let cc = 0; cc < BOARD_SIZE; cc++) cells.push([r, cc]);
+  for (let rr = 0; rr < BOARD_SIZE; rr++) if (rr !== r) cells.push([rr, c]);
+  return cells;
+}
+
+/** The 3×3 box centered on (r, c), clipped to the board (the Bomb blast). */
+export function boxCells(r: number, c: number): [number, number][] {
+  const cells: [number, number][] = [];
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      const rr = r + dr;
+      const cc = c + dc;
+      if (inBounds(rr, cc)) cells.push([rr, cc]);
+    }
+  }
+  return cells;
+}
+
 export function filledCount(board: Board): number {
   let n = 0;
   for (const row of board) for (const cell of row) if (cell !== null) n++;

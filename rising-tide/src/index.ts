@@ -6,7 +6,7 @@ export { RisingTideEngine } from './engine.ts';
 export { createRng, rngFromState, fnv1a, autoSeed, type Rng } from './rng.ts';
 export { PIECES, COLORS, pieceById, pieceSize, type Piece, type ColorId } from './pieces.ts';
 export { LEVELS, levelById, levelByNumber } from './levels.ts';
-export { seedElements, resolveClears, BONUS_MULT, type ClearResolution } from './elements.ts';
+export { seedElements, resolveClears, resolveClearedCells, BONUS_MULT, type ClearResolution } from './elements.ts';
 export * as board from './board.ts';
 export { scorePlacement } from './scoring.ts';
 export { applyTide, phaseFor, riseFor, TIDE_CAP } from './tide.ts';
@@ -32,6 +32,7 @@ export {
   type NewGameConfig,
   type Reward,
   type SerializedGame,
+  type SpecialId,
   type Status,
   type Surface,
   type TidePhase,

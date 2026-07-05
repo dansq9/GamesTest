@@ -121,13 +121,16 @@ export interface ClearResolution {
 }
 
 /**
- * Resolve a set of full rows+cols with element awareness (spec 04 §1). Corals with hits>1 are
- * struck (hits--) but NOT removed this clear; everything else in the lines clears, collecting
- * pearls/barnacles/corals and accumulating bonus multipliers. Pure: returns fresh board+layer.
+ * Resolve an explicit SET of cells with element awareness (spec 04 §1) — the shared core used by
+ * line clears AND special-block blasts. Corals with hits>1 are struck (hits--) but NOT removed this
+ * clear; everything else clears, collecting pearls/barnacles/corals and accumulating bonus
+ * multipliers. Cells are processed in row-major order; duplicates are harmless (idempotent).
+ * Pure: returns fresh board+layer.
  */
-export function resolveClears(board: Board, elements: ElementsLayer, rows: number[], cols: number[]): ClearResolution {
-  const rowSet = new Set(rows);
-  const colSet = new Set(cols);
+export function resolveClearedCells(board: Board, elements: ElementsLayer, cells: Iterable<readonly [number, number]>): ClearResolution {
+  const want = new Set<number>();
+  for (const [r, c] of cells) want.add(r * BOARD_SIZE + c);
+
   const nextBoard: Board = board.map((row) => row.map((cell) => (cell === null ? null : { ...cell })));
   const nextEl: ElementsLayer = elements.map((row) => row.slice());
 
@@ -140,11 +143,10 @@ export function resolveClears(board: Board, elements: ElementsLayer, rows: numbe
 
   for (let r = 0; r < BOARD_SIZE; r++) {
     for (let c = 0; c < BOARD_SIZE; c++) {
-      if (!(rowSet.has(r) || colSet.has(c))) continue;
+      if (!want.has(r * BOARD_SIZE + c)) continue;
       const cell = nextBoard[r]![c];
       if (!cell) continue;
 
-      // Coral with strikes remaining: strike, do NOT remove this clear.
       if (cell.element === 'coral2' && (cell.hits ?? 1) > 1) {
         const remaining = (cell.hits ?? 2) - 1;
         nextBoard[r]![c] = { ...cell, hits: remaining };
@@ -153,7 +155,6 @@ export function resolveClears(board: Board, elements: ElementsLayer, rows: numbe
       }
 
       const marker = nextEl[r]![c];
-      // Remove the cell.
       nextBoard[r]![c] = null;
       nextEl[r]![c] = null;
       cleared.push([r, c]);
@@ -169,6 +170,19 @@ export function resolveClears(board: Board, elements: ElementsLayer, rows: numbe
 
   if (bonusMult > BONUS_MULT_CAP) bonusMult = BONUS_MULT_CAP;
   return { board: nextBoard, elements: nextEl, cleared, pearls, barnacles, corals, coralHits, bonusMult };
+}
+
+/** Resolve a set of full rows+cols (the normal line clear). */
+export function resolveClears(board: Board, elements: ElementsLayer, rows: number[], cols: number[]): ClearResolution {
+  const cells: [number, number][] = [];
+  const rowSet = new Set(rows);
+  const colSet = new Set(cols);
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      if (rowSet.has(r) || colSet.has(c)) cells.push([r, c]);
+    }
+  }
+  return resolveClearedCells(board, elements, cells);
 }
 
 export type { Cell };

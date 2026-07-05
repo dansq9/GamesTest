@@ -28,12 +28,13 @@ npm test            # node:test over the type-stripped .ts suite
 npm run build       # tsc -> dist/ (compiled JS + declarations)
 ```
 
-## Status — E0–E2 + E3a complete (52 tests green)
+## Status — E0–E2 + E3a/E3b complete (60 tests green)
 
 **E0 ship criterion** (spec `13`): *seed ⇒ byte-identical game, proven by test.* ✅
 **E1 ship criterion** (spec `13`): *the safety floor — no unavoidable deaths.* ✅
 **E2 ship criterion** (spec `13`): *three fairness modes; Guided globally un-losable; seeded daily replay.* ✅
-**E3a** (first slice of E3): *40-level table + all 7 goal types + core elements, all playable headless.* ✅
+**E3a** (slice of E3): *40-level table + all 7 goal types + core elements, all playable headless.* ✅
+**E3b** (slice of E3): *combo one-move grace + combo-earned specials + the two special blocks.* ✅
 
 Implemented and tested:
 - **RNG** (`rng.ts`) — mulberry32 + FNV-1a, integer-exact, the single randomness source. State-based
@@ -63,10 +64,15 @@ Implemented and tested:
   **barnacle** (blocker→removed), **coral** (2-hit strike), **pearl** (collect), **bonus** (score
   multiplier). Anchor + Tier-B `current`/`storm` are authored in the levels but their behavior is a
   later E3 slice; those levels currently play as clean boards.
+- **Combos & specials** (E3b, spec `05`) — the **one-move grace** (a streak survives a single quiet
+  setup move; `comboHeld`), **combo-earned specials** (×3 → Line-Blaster, ×6 → Bomb, ×10 → repeat,
+  granted into a `satchel`; disabled in Seeded so shared boards stay identical), and the two
+  **special blocks**: Line-Blaster (clears its row+column, N=2) and Bomb (clears a 3×3, flat score),
+  both routed through element resolution and deployed via `deploySpecial`.
 - **Engine** (`engine.ts`) — the turn loop with canonical event ordering, **all 7 goal types**
   (`lines`/`multi`/`combo`/`survive`/`score`/`collect`/`barnacle`), element-aware clearing with
-  bonus multipliers, win-before-loss terminals, snapshot/restore, and the monetization hooks
-  (`grantMoves`/`pushTide`/`continueAfterLoss`/`rerollTray`).
+  bonus multipliers, win-before-loss terminals, snapshot/restore, and the hooks
+  (`grantMoves`/`pushTide`/`continueAfterLoss`/`rerollTray`/`deploySpecial`).
 
 **Proven by the suite:** same seed ⇒ identical event stream (golden-master); seeds diverge;
 restore-then-play == continuous play; snapshots are detached captures; **every served hand is safe
@@ -83,8 +89,8 @@ scale — the full N ≥ 1e6 CasualBot certification is E7.
 | **E1** | Solvability floor (`handIsSafe` DFS), `ContextualGenerator`, no-flood, gap-fill | ✅ done |
 | **E2** | Fairness modes (guided/fair/seeded), assist-fade curve, **Guided rescue rule + fill ceiling**, daily seed | ✅ done |
 | **E3a** | 40-level table, 7 goal types, core elements (barnacle/coral/pearl/bonus) | ✅ done |
-| E3b | Combo one-move grace, special blocks (Line-Blaster, Bomb), combo-earned specials | next |
-| E3c | Anchor lock + Tier-B elements (current/storm), power-up satchel | |
+| **E3b** | Combo one-move grace, special blocks (Line-Blaster, Bomb), combo-earned specials | ✅ done |
+| E3c | Anchor lock + Tier-B elements (current/storm), power-up satchel | next |
 | E3d | DDA system (player-adaptive difficulty), reconciled with determinism | |
 | E4 | Economy, star-band resolution, streaks, monetization wiring | |
 | E5 | Canvas 2D UI (Claude Design) | |

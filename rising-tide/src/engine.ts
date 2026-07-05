@@ -14,13 +14,16 @@
 import { autoSeed, createRng, rngFromState, type Rng } from './rng.ts';
 import {
   absoluteCells,
+  boxCells,
   findFullLines,
   hasAnyMove,
   legalMoves as legalMovesFor,
   placeCells,
+  rowColCells,
 } from './board.ts';
+import { COLORS } from './pieces.ts';
 import { contextFor, generateTray, type GenContext } from './generator.ts';
-import { resolveClears, seedElements, type ClearResolution } from './elements.ts';
+import { resolveClearedCells, resolveClears, seedElements, type ClearResolution } from './elements.ts';
 import { applyTide, TIDE_CAP } from './tide.ts';
 import { levelById } from './levels.ts';
 import {
@@ -32,6 +35,7 @@ import {
   type NewGameConfig,
   type Reward,
   type SerializedGame,
+  type SpecialId,
   type TrayPiece,
 } from './state.ts';
 
@@ -134,22 +138,40 @@ export class RisingTideEngine {
     s.movesUsed++;
     events.push({ type: 'placed', pieceIdx, color: piece.color, cells: abs });
 
-    // 2. Find + clear full lines simultaneously (element-aware: coral strikes, pearl/barnacle/bonus).
-    const { rows, cols } = findFullLines(s.board);
-    const N = rows.length + cols.length;
-    let clearedCount = 0;
+    // 2. Resolve the clear — a normal line clear, or a special-block blast (spec 05 §2).
+    const special = piece.special;
+    let rows: number[] = [];
+    let cols: number[] = [];
+    let N = 0;
     let resolved: ClearResolution | null = null;
-    if (N > 0) {
-      resolved = resolveClears(s.board, s.elements, rows, cols);
+    if (special === 'lineBlaster') {
+      resolved = resolveClearedCells(s.board, s.elements, rowColCells(r, c));
+      N = 2; // row + column counted as two lines (spec 05 §2.1)
+    } else if (special === 'bomb') {
+      resolved = resolveClearedCells(s.board, s.elements, boxCells(r, c));
+      N = 0; // area blast scores flat unless it happens to complete lines (spec 05 §2.2)
+    } else {
+      const full = findFullLines(s.board);
+      rows = full.rows;
+      cols = full.cols;
+      N = rows.length + cols.length;
+      if (N > 0) resolved = resolveClears(s.board, s.elements, rows, cols);
+    }
+
+    // 3. Apply the clear, or run the one-move grace on a non-clearing placement (spec 05 §1.2).
+    const clearedCount = resolved ? resolved.cleared.length : 0;
+    if (resolved && clearedCount > 0) {
       s.board = resolved.board;
       s.elements = resolved.elements;
-      clearedCount = resolved.cleared.length;
 
-      // 3. Combo up (+ high-water) and multi high-water; 4. score (bonus tiles multiply the base).
       s.combo += 1;
+      s.comboGrace = true; // any clear refreshes the grace
       if (s.combo > s.comboBest) s.comboBest = s.combo;
       if (N > s.bestMulti) s.bestMulti = N;
-      const pts = N * N * clearedCount * 10 * resolved.bonusMult + s.combo * 50;
+
+      // 4. Score: bomb blasts score flat (cells×10); line clears / line-blaster use N²·cells·10.
+      const base = special === 'bomb' ? clearedCount * 10 : N * N * clearedCount * 10;
+      const pts = base * resolved.bonusMult + s.combo * 50;
       s.score += pts;
       s.totalLines += N;
       s.pearlsCollected += resolved.pearls.length;
@@ -158,14 +180,20 @@ export class RisingTideEngine {
 
       events.push({ type: 'linesCleared', rows, cols, cells: resolved.cleared, points: pts });
       events.push({ type: 'combo', value: s.combo });
-      // 4b. coralHit (before tide, per canonical order).
       for (const h of resolved.coralHits) {
         events.push({ type: 'coralHit', cells: [h.cell], remaining: h.remaining });
       }
+      // Combo-earned specials — disabled in Seeded so the shared board stays identical (spec 05 §1.4).
+      if (s.fairness !== 'seeded') this.#grantComboRewards(events);
     } else if (s.combo > 0) {
-      // 3. Combo broken (one-move grace lands in E3b; E0/E3a break immediately).
-      events.push({ type: 'comboBroken', was: s.combo });
-      s.combo = 0;
+      if (s.comboGrace) {
+        s.comboGrace = false; // spend the one forgiven move — streak survives
+        events.push({ type: 'comboHeld', value: s.combo });
+      } else {
+        events.push({ type: 'comboBroken', was: s.combo });
+        s.combo = 0;
+        s.comboRewardAt = 0; // a fresh streak can earn specials again
+      }
     }
 
     // 5. Tide (emit even when tide falls; carries phase + rises).
@@ -283,6 +311,23 @@ export class RisingTideEngine {
     });
   }
 
+  /** Grant combo-milestone specials into the satchel (spec 05 §1.4 ladder: ×3 LB, ×6 Bomb, ×10 LB). */
+  #grantComboRewards(events: GameEvent[]): void {
+    const s = this.#state;
+    const ladder: Array<[number, SpecialId]> = [
+      [3, 'lineBlaster'],
+      [6, 'bomb'],
+      [10, 'lineBlaster'],
+    ];
+    for (const [milestone, special] of ladder) {
+      if (s.combo >= milestone && milestone > s.comboRewardAt) {
+        s.satchel[special] += 1;
+        s.comboRewardAt = milestone;
+        events.push({ type: 'comboReward', special, combo: s.combo });
+      }
+    }
+  }
+
   // ── monetization hooks (spec 02 §8) ─────────────────────────────────────────
   grantMoves(n: number): Command {
     const s = this.#state;
@@ -293,6 +338,24 @@ export class RisingTideEngine {
       s.lossReason = undefined;
     }
     return { state: s, events: [{ type: 'movesGranted', added: n, movesUsed: s.movesUsed, moveLimit: s.moveLimit }] };
+  }
+
+  /**
+   * Deploy an earned special from the satchel — appends a 1×1 special block to the current tray for
+   * the player to place. Draws one color from the stream (recorded; snapshot-safe). Disabled in
+   * Seeded so the shared board is never perturbed (spec 05 §1.4, §2.4).
+   */
+  deploySpecial(special: SpecialId): Command {
+    const s = this.#state;
+    if (s.status !== 'playing' || s.fairness === 'seeded' || s.satchel[special] <= 0) {
+      return { state: s, events: [] };
+    }
+    s.satchel[special] -= 1;
+    const color = COLORS[Math.floor(this.#rng.next() * COLORS.length)]!;
+    const pieceIdx = s.tray.length;
+    s.tray.push({ pieceId: special, cells: [[0, 0]], color, special, placed: false });
+    s.rngCalls = this.#rng.calls;
+    return { state: s, events: [{ type: 'specialDeployed', special, pieceIdx }] };
   }
 
   pushTide(p: number): Command {

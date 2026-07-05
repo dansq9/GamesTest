@@ -15,6 +15,7 @@ export type Surface = 'zen' | 'tide' | 'blitz' | 'voyage';
 export type Fairness = 'guided' | 'fair' | 'seeded';
 
 export type GoalType = 'lines' | 'multi' | 'combo' | 'survive' | 'score' | 'collect' | 'barnacle';
+export type SpecialId = 'lineBlaster' | 'bomb';
 export type Status = 'playing' | 'won' | 'lost';
 export type TidePhase = 'calm' | 'rising' | 'critical' | 'drowning';
 export type LossReason = 'no-moves' | 'drowned' | 'out-of-moves';
@@ -34,6 +35,7 @@ export interface TrayPiece {
   cells: [number, number][]; // denormalized offsets, for host convenience
   color: ColorId;
   placed: boolean;
+  special?: SpecialId; // set on deployed special blocks (1×1 pure clears, spec 05 §2)
 }
 
 export interface ElementSpec {
@@ -69,7 +71,10 @@ export type GameEvent =
   | { type: 'placed'; pieceIdx: number; color: ColorId; cells: [number, number][] }
   | { type: 'linesCleared'; rows: number[]; cols: number[]; cells: [number, number][]; points: number }
   | { type: 'combo'; value: number }
+  | { type: 'comboHeld'; value: number } // grace spent — streak survived a quiet move (spec 05 §1.2)
   | { type: 'comboBroken'; was: number }
+  | { type: 'comboReward'; special: SpecialId; combo: number } // a milestone granted a special (spec 05 §1.4)
+  | { type: 'specialDeployed'; special: SpecialId; pieceIdx: number }
   | { type: 'tideRise'; tide: number; phase: TidePhase; rises: number }
   | { type: 'pearlCollected'; cells: [number, number][]; count: number; total: number }
   | { type: 'barnacleRemoved'; cells: [number, number][]; count: number; total: number }
@@ -102,9 +107,12 @@ export interface GameState {
   // scoring
   score: number;
   combo: number; // consecutive clearing placements
+  comboGrace: boolean; // is a forgiven non-clearing move still available this streak (spec 05 §1.2)
   comboBest: number; // high-water combo this game (drives the 'combo' goal)
+  comboRewardAt: number; // highest combo milestone already granted this streak (spec 05 §1.4)
   totalLines: number;
   bestMulti: number; // most lines cleared in a single placement (drives the 'multi' goal)
+  satchel: Record<SpecialId, number>; // earned specials awaiting deployment (spec 05 §3)
 
   // tide
   tide: number;
@@ -176,9 +184,12 @@ export function blankState(surface: Surface, fairness: Fairness, seed: string, g
     hands: 0,
     score: 0,
     combo: 0,
+    comboGrace: false,
     comboBest: 0,
+    comboRewardAt: 0,
     totalLines: 0,
     bestMulti: 0,
+    satchel: { lineBlaster: 0, bomb: 0 },
     tide: 0,
     tidePhase: 'calm',
     tideRises: 0,

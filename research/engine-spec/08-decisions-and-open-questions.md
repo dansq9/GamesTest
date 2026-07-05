@@ -115,6 +115,33 @@ Not "open" so much as **chosen by the sim harness** and stated for visibility (`
 
 ---
 
+## H. Star-band & economy additions  *(owners: Systems Designer + Progression; new from `09`–`12`)*
+
+| ID | Question | Recommendation | Src |
+|---|---|---|---|
+| A12 ○ | Star distribution targets per chapter (3★/2★/1★ shares) | 65/28/7 → 42/43/15; milestones 75/22/3 | `09 §2` |
+| A13 ★ | Survive star metric: `maxTide` (run-worst) vs `tideAtWin` (at-win) | **`maxTide`** (rewards sustained calm) | `09 §1.4` |
+| A14 ○ | G15 tolerances: 3★ ±8pp, 1★ ≤target+5pp | Adopt as recommended | `09 §4.3` |
+| A15 ○ | Star-band chapter cushion factors c3/c2/b3 | Ch1 1.15/1.60/+1 → Ch4 1.00/1.40/+0 (sim overrides) | `09 §1.8` |
+| E7 $ | Power-ups: pearl cost vs RV-only (#1 balance question) | Lean **RV-primary**, pearls as fallback | `10 §6` |
+| E8 ★ | First-Win-of-Day +10 pearls — approve? | **YES** (gentle, no FOMO) | `10 §1` |
+| E9 ○ | Special block endless store prices (LB ~15–20, Bomb ~25–30) | Adopt as recommended | `10 §4` |
+| E10 ○ | Satchel hold caps (~5 power-ups, ~3 specials) | Adopt | `10 §3–4` |
+| E11 ★ | Continue cap per game (≤2) | Adopt | `10 §2` |
+| E12 $ | Cosmetic store rotation cadence and slot count | Needs definition | `10 §5` |
+| E13 ★ | Free daily Undo allowance — 1 or 2 per day? | **2** (keeps forgiveness ungated) | `10 §3` |
+| E14 ★ | Streak-break window — 2 vs 3 missed days | **3** (per persona review — 2 days is a normal weekend) | `10 §5` |
+| E15 ★ | Streak-freeze hold cap — 2 vs 3–4 | **3–4** (per persona review — covers a short trip) | `10 §5` |
+| AD1 $ | Double-star-pearls RV placement — approve? | YES (celebratory, cozy-safe) | `12 §1` |
+| AD2 $ | Interstitial frequency cap (every Nth level) | Every 3rd level completion | `12 §1` |
+| AD3 $ | First-session ad immunity window | 3 sessions or 5 levels | `12 §1` |
+| AD4 $ | Remove-ads IAP price | $4.99–$9.99 one-time | `12 §2` |
+| AD5 $ | Banner on gameplay board? | Product owner's call (see `12 §1.3`) | `12 §1` |
+| G-G15 ○ | G15 star-band calibration gate (WARN tier) | Adopt per `09 §4.3` | `09 §4.3` |
+| G-G16 ○ | G16 DDA validation gate (WARN tier) | Adopt per `11 §5.2` | `11 §5` |
+
+---
+
 ## What's needed before build vs. what the sim will settle
 
 - **Decide before E3–E4 (content):** the ★ items in C and D (element cuts, satchel shape, special debuts,

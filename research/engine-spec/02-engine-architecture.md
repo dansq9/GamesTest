@@ -353,6 +353,7 @@ The 45–65 hybrid model (rewarded video + IAP: "continue", "+N moves", "reroll 
 | `grantMoves(n)` | Raise `moveLimit += n`, `grantedMoves += n`; if game was `lost` with `out-of-moves`, set `status:'playing'`. | `movesGranted`; state `moveLimit/movesUsed/grantedMoves`. **Deterministic** (no draw). | doc 02 §8; new — supports "+N moves" |
 | `continueAfterLoss(opts)` | Revive from a loss. Tide-drown → `tide = max(0, tide-3)` (the prototype "sandbag", 694), `status:'playing'`, `continues++`. No-moves → force a **guaranteed-safe tray** (small pieces) so play resumes. | `continued`; `trayRefilled` if a tray was regenerated. | `_resolveDrown` 689–710 |
 | `rerollTray(opts)` | Replace the current (unplaced) tray with a fresh generated one. | `trayRerolled`; `deterministic` flag on the event. | new — "reroll tray" |
+| `pushTide(p)` | Push tide down by `p` units: `tide = max(0, tide - p)`, recompute phase. **Never touches `tideRises`** — survive progress is never rectified downward. | `tidePushed { amount, newTide }`; no RNG drawn. | `05 §3.1`, `08 D9` — so an in-play tide-push reads as a helper, not a revive |
 
 **Determinism implication (the important rule):**
 - A reroll/continue that draws new pieces **must still route through the seed** to stay deterministic — but doing so *diverges the seed stream from a clean playthrough*, which is illegal for **Seeded/ranked** contexts. Therefore:

@@ -13,7 +13,8 @@ const TIDE_GAME: NewGameConfig = { surface: 'tide', seed: 'golden-seed-001' };
 const VOYAGE_LINES: NewGameConfig = {
   surface: 'voyage',
   seed: 'golden-seed-002',
-  level: { id: 'e0-lines', name: 'First Lines', chapter: 'shallows', goal: 'lines', target: 3, fairness: 'guided' },
+  // A real registry level so restore() can rehydrate its LevelDef by id.
+  level: { id: 'l2', n: 2, name: 'Find the Line', chapter: 'shallows', goal: 'lines', target: 3, fairness: 'guided' },
 };
 
 test('golden-master: same seed ⇒ identical event stream (tide game)', () => {

@@ -28,11 +28,12 @@ npm test            # node:test over the type-stripped .ts suite
 npm run build       # tsc -> dist/ (compiled JS + declarations)
 ```
 
-## Status — E0 + E1 + E2 complete (39 tests green)
+## Status — E0–E2 + E3a complete (52 tests green)
 
 **E0 ship criterion** (spec `13`): *seed ⇒ byte-identical game, proven by test.* ✅
 **E1 ship criterion** (spec `13`): *the safety floor — no unavoidable deaths.* ✅
 **E2 ship criterion** (spec `13`): *three fairness modes; Guided globally un-losable; seeded daily replay.* ✅
+**E3a** (first slice of E3): *40-level table + all 7 goal types + core elements, all playable headless.* ✅
 
 Implemented and tested:
 - **RNG** (`rng.ts`) — mulberry32 + FNV-1a, integer-exact, the single randomness source. State-based
@@ -55,8 +56,16 @@ Implemented and tested:
   (spec `03 §4.3`): at/above `F_rescue`=0.72 the served hand must be *clearing* and within
   `F_cap`=0.80, so the board can never ratchet into a dead state.
 - **Daily** (`daily.ts`) — date-based Daily Tide seed (spec `03 §1.3`); one board worldwide.
-- **Engine** (`engine.ts`) — the turn loop with canonical event ordering, goals (`lines`/`score`/
-  `survive`), win-before-loss terminals, snapshot/restore, and the monetization hooks
+- **Levels** (`levels.ts`) — the full **40-level voyage** (spec `01 §1`): 4 chapters, element drip,
+  milestones, move budgets, per-level tide rates.
+- **Elements** (`elements.ts`) — deterministic seeding (drawn before the first tray, spread so no
+  line is pre-loaded) + element-aware clear resolution for the Tier-A cell/collectible elements:
+  **barnacle** (blocker→removed), **coral** (2-hit strike), **pearl** (collect), **bonus** (score
+  multiplier). Anchor + Tier-B `current`/`storm` are authored in the levels but their behavior is a
+  later E3 slice; those levels currently play as clean boards.
+- **Engine** (`engine.ts`) — the turn loop with canonical event ordering, **all 7 goal types**
+  (`lines`/`multi`/`combo`/`survive`/`score`/`collect`/`barnacle`), element-aware clearing with
+  bonus multipliers, win-before-loss terminals, snapshot/restore, and the monetization hooks
   (`grantMoves`/`pushTide`/`continueAfterLoss`/`rerollTray`).
 
 **Proven by the suite:** same seed ⇒ identical event stream (golden-master); seeds diverge;
@@ -73,7 +82,10 @@ scale — the full N ≥ 1e6 CasualBot certification is E7.
 | **E0** | Determinism skeleton + golden-master | ✅ done |
 | **E1** | Solvability floor (`handIsSafe` DFS), `ContextualGenerator`, no-flood, gap-fill | ✅ done |
 | **E2** | Fairness modes (guided/fair/seeded), assist-fade curve, **Guided rescue rule + fill ceiling**, daily seed | ✅ done |
-| E3 | 40-level content, board elements, combo/specials, satchel, DDA | next |
+| **E3a** | 40-level table, 7 goal types, core elements (barnacle/coral/pearl/bonus) | ✅ done |
+| E3b | Combo one-move grace, special blocks (Line-Blaster, Bomb), combo-earned specials | next |
+| E3c | Anchor lock + Tier-B elements (current/storm), power-up satchel | |
+| E3d | DDA system (player-adaptive difficulty), reconciled with determinism | |
 | E4 | Economy, star-band resolution, streaks, monetization wiring | |
 | E5 | Canvas 2D UI (Claude Design) | |
 | E6 | Capacitor shell + AdMob | |
@@ -102,10 +114,13 @@ match. Tracked so the spec and code stay in sync:
    (`p_base = clamp(0.60 − 0.05·(L−1))`) and a lookup table; they disagree at L11/L12 (table .05/.00,
    formula .10/.05). We follow the **formula** (matches the prose "hits 0 at L=13"). → reconcile the
    spec table to the formula.
-5. **E-phase placeholders still open**, marked inline: `stars = 3` (real star-bands are E4/spec
-   `09`); no board elements (E3); `continueAfterLoss` on no-moves regenerates a normal tray (should be
-   guaranteed-safe — cheap follow-up); the Guided fill-ceiling fallback preserves per-hand safety but
-   not always the clearing property on rare boards (safety still holds — no unavoidable death).
+5. **L15 collect-over-coral (audit B4).** The spec authored L15 `collect 5` over coral with no pearl,
+   and the only collect counter was `pearlsCollected` — unwinnable as authored. Resolved: the collect
+   goal now counts `pearlsCollected + coralsCleared`, so coral-collect levels work. → note in spec.
+6. **E-phase placeholders still open**, marked inline: `stars = 3` (real star-bands are E4/spec
+   `09`); anchor lock + `current`/`storm` behavior (E3c) — those levels currently play as clean
+   boards; combo one-move grace + specials (E3b); `continueAfterLoss` on no-moves regenerates a normal
+   tray (should be guaranteed-safe — cheap follow-up).
 
 Deferred audit blockers not touched by E0, for later phases: DDA↔determinism reconciliation (B2 — DDA
 inputs must live in serialized state or be off in seeded/ranked, per spec `11`); the ~10 E3 state fields

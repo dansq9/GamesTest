@@ -102,7 +102,9 @@ export interface GameState {
   // scoring
   score: number;
   combo: number; // consecutive clearing placements
+  comboBest: number; // high-water combo this game (drives the 'combo' goal)
   totalLines: number;
+  bestMulti: number; // most lines cleared in a single placement (drives the 'multi' goal)
 
   // tide
   tide: number;
@@ -122,6 +124,7 @@ export interface GameState {
   elements: (ElementId | null)[][]; // parallel modifier layer
   pearlsCollected: number;
   barnaclesRemoved: number;
+  coralsCleared: number; // fully-struck coral cells (drives coral 'collect' goals)
 
   // outcome
   status: Status;
@@ -173,7 +176,9 @@ export function blankState(surface: Surface, fairness: Fairness, seed: string, g
     hands: 0,
     score: 0,
     combo: 0,
+    comboBest: 0,
     totalLines: 0,
+    bestMulti: 0,
     tide: 0,
     tidePhase: 'calm',
     tideRises: 0,
@@ -185,6 +190,7 @@ export function blankState(surface: Surface, fairness: Fairness, seed: string, g
     elements: emptyElements(),
     pearlsCollected: 0,
     barnaclesRemoved: 0,
+    coralsCleared: 0,
     status: 'playing',
     continues: 0,
     rerolls: 0,

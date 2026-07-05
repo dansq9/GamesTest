@@ -14,14 +14,13 @@
 import { autoSeed, createRng, rngFromState, type Rng } from './rng.ts';
 import {
   absoluteCells,
-  clearLines,
   findFullLines,
   hasAnyMove,
   legalMoves as legalMovesFor,
   placeCells,
 } from './board.ts';
 import { contextFor, generateTray, type GenContext } from './generator.ts';
-import { scorePlacement } from './scoring.ts';
+import { resolveClears, seedElements, type ClearResolution } from './elements.ts';
 import { applyTide, TIDE_CAP } from './tide.ts';
 import { levelById } from './levels.ts';
 import {
@@ -69,7 +68,10 @@ export class RisingTideEngine {
       s.goal = level.goal;
       s.goalTarget = level.target;
       s.moveLimit = level.moveLimit ?? 0;
-      // E3: obstacle/element seeding draws from the rng HERE, before the first tray (spec 03 §1.2).
+      // Element seeding draws from the rng HERE, before the first tray (spec 03 §1.2, spec 04 §1.0).
+      if (level.elements && level.elements.length > 0) {
+        seedElements(s.board, s.elements, level.elements, this.#rng);
+      }
     }
 
     // Opening tray (the first hand).
@@ -132,24 +134,36 @@ export class RisingTideEngine {
     s.movesUsed++;
     events.push({ type: 'placed', pieceIdx, color: piece.color, cells: abs });
 
-    // 2. Find + clear full lines simultaneously.
+    // 2. Find + clear full lines simultaneously (element-aware: coral strikes, pearl/barnacle/bonus).
     const { rows, cols } = findFullLines(s.board);
     const N = rows.length + cols.length;
     let clearedCount = 0;
+    let resolved: ClearResolution | null = null;
     if (N > 0) {
-      const res = clearLines(s.board, rows, cols);
-      s.board = res.board;
-      clearedCount = res.cleared.length;
+      resolved = resolveClears(s.board, s.elements, rows, cols);
+      s.board = resolved.board;
+      s.elements = resolved.elements;
+      clearedCount = resolved.cleared.length;
 
-      // 3. Combo up; 4. score.
+      // 3. Combo up (+ high-water) and multi high-water; 4. score (bonus tiles multiply the base).
       s.combo += 1;
-      const pts = scorePlacement(N, clearedCount, s.combo);
+      if (s.combo > s.comboBest) s.comboBest = s.combo;
+      if (N > s.bestMulti) s.bestMulti = N;
+      const pts = N * N * clearedCount * 10 * resolved.bonusMult + s.combo * 50;
       s.score += pts;
       s.totalLines += N;
-      events.push({ type: 'linesCleared', rows, cols, cells: res.cleared, points: pts });
+      s.pearlsCollected += resolved.pearls.length;
+      s.barnaclesRemoved += resolved.barnacles.length;
+      s.coralsCleared += resolved.corals.length;
+
+      events.push({ type: 'linesCleared', rows, cols, cells: resolved.cleared, points: pts });
       events.push({ type: 'combo', value: s.combo });
+      // 4b. coralHit (before tide, per canonical order).
+      for (const h of resolved.coralHits) {
+        events.push({ type: 'coralHit', cells: [h.cell], remaining: h.remaining });
+      }
     } else if (s.combo > 0) {
-      // 3. Combo broken (E5-combo grace lands later; E0 breaks immediately).
+      // 3. Combo broken (one-move grace lands in E3b; E0/E3a break immediately).
       events.push({ type: 'comboBroken', was: s.combo });
       s.combo = 0;
     }
@@ -169,9 +183,20 @@ export class RisingTideEngine {
       events.push({ type: 'tideRise', tide: s.tide, phase: s.tidePhase, rises: s.tideRises });
     }
 
-    // 6–7. Element resolution (barnacle/coral/pearl/anchor/current/bonus/storm) — E3.
+    // 6–8. Collectible / reward events (after tide, per canonical order).
+    if (resolved) {
+      if (resolved.pearls.length > 0) {
+        events.push({ type: 'pearlCollected', cells: resolved.pearls, count: resolved.pearls.length, total: s.pearlsCollected });
+      }
+      if (resolved.barnacles.length > 0) {
+        events.push({ type: 'barnacleRemoved', cells: resolved.barnacles, count: resolved.barnacles.length, total: s.barnaclesRemoved });
+      }
+      if (resolved.bonusMult > 1) {
+        events.push({ type: 'elementEvent', element: 'bonus', detail: { mult: resolved.bonusMult } });
+      }
+    }
 
-    // 8. Goal progress.
+    // 9. Goal progress.
     if (s.goal) {
       s.goalProgress = this.#goalProgressValue();
       events.push({ type: 'goalProgress', goal: s.goal, progress: s.goalProgress, target: s.goalTarget });
@@ -214,33 +239,31 @@ export class RisingTideEngine {
     return { state: s, events };
   }
 
-  // ── goal helpers (E0 subset: lines / score / survive) ───────────────────────
+  // ── goal helpers (all 7 goal types) ─────────────────────────────────────────
   #goalProgressValue(): number {
-    switch (this.#state.goal) {
+    const s = this.#state;
+    switch (s.goal) {
       case 'lines':
-        return this.#state.totalLines;
+        return s.totalLines;
       case 'score':
-        return this.#state.score;
+        return s.score;
       case 'survive':
-        return this.#state.tideRises;
+        return s.tideRises;
+      case 'multi':
+        return s.bestMulti; // most lines cleared in one placement
+      case 'combo':
+        return s.comboBest; // best combo streak reached
+      case 'collect':
+        return s.pearlsCollected + s.coralsCleared; // level seeds one collectible type
+      case 'barnacle':
+        return s.barnaclesRemoved;
       default:
-        return this.#state.goalProgress; // multi/combo/collect/barnacle → E3
+        return s.goalProgress;
     }
   }
 
   #goalMet(): boolean {
-    const s = this.#state;
-    if (!s.goal) return false;
-    switch (s.goal) {
-      case 'lines':
-        return s.totalLines >= s.goalTarget;
-      case 'score':
-        return s.score >= s.goalTarget;
-      case 'survive':
-        return s.tideRises >= s.goalTarget;
-      default:
-        return false; // E3 goals
-    }
+    return this.#state.goal ? this.#goalProgressValue() >= this.#state.goalTarget : false;
   }
 
   #tideActive(): boolean {

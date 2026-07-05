@@ -28,11 +28,12 @@ npm test            # node:test over the type-stripped .ts suite
 npm run build       # tsc -> dist/ (compiled JS + declarations)
 ```
 
-## Status — E0 complete (determinism skeleton)
+## Status — E0 + E1 complete (29 tests green)
 
-The E0 ship criterion (spec `13`): **seed ⇒ byte-identical game, proven by test.** Done.
+**E0 ship criterion** (spec `13`): *seed ⇒ byte-identical game, proven by test.* ✅
+**E1 ship criterion** (spec `13`): *the safety floor — no unavoidable deaths.* ✅
 
-Implemented and tested (21 tests green):
+Implemented and tested:
 - **RNG** (`rng.ts`) — mulberry32 + FNV-1a, integer-exact, the single randomness source. State-based
   resume: the 32-bit accumulator is persisted and rehydrated exactly (spec `03 §1.4`).
 - **State** (`state.ts`) — the full `GameState` / `GameEvent` / `LevelDef` / `SerializedGame` shapes.
@@ -40,26 +41,38 @@ Implemented and tested (21 tests green):
   `hasAnyMove`, `legalMoves`, `fillPct`.
 - **Scoring** (`scoring.ts`) — `N*N*cells*10 + combo*50` (spec `01 §5`).
 - **Tide** (`tide.ts`) — rise schedule, per-level `tideRate`, `tideRises` accrual, phase.
-- **Generator** (`generator.ts`) — weighted roulette in the frozen draw order (spec `03 §1.2`).
+- **Solvability** (`solvability.ts`) — the `handIsSafe` depth-≤3 DFS with simulated clears, plus the
+  guaranteed-terminating constructive `safeFallback` (spec `03 §2`).
+- **Generator** (`generator.ts`) — the `ContextualGenerator`: weighted roulette + pressure dial +
+  no-flood + gap-fill, in the frozen draw order (spec `03 §1.2`), validated by the safety floor so it
+  serves a safe hand whenever one exists (spec `03 §2.6`).
+- **Assist** (`assist.ts`) — E1 per-surface/fairness posture. **Zen = genuinely calmer** (kindest
+  pressure dial + light gap-fill, no goal/tide), not inflated targets.
 - **Engine** (`engine.ts`) — the turn loop with canonical event ordering, goals (`lines`/`score`/
   `survive`), win-before-loss terminals, snapshot/restore, and the monetization hooks
   (`grantMoves`/`pushTide`/`continueAfterLoss`/`rerollTray`).
 
-**Proven by the suite:** same seed ⇒ identical event stream (golden-master); different seeds diverge;
-restore-then-play == continuous play; snapshots are detached point-in-time captures.
+**Proven by the suite:** same seed ⇒ identical event stream (golden-master); seeds diverge;
+restore-then-play == continuous play; snapshots are detached captures; and **every served hand is safe
+across 1,600 random-legal games** (guided/fair/zen) with no-flood holding throughout — the T3/T4/T5
+invariants (spec `03 §7`) at a fast CI scale.
 
 ## Roadmap (spec `13`, phases E0–E7)
 
 | Phase | Scope | State |
 |---|---|---|
 | **E0** | Determinism skeleton + golden-master | ✅ done |
-| E1 | Solvability floor (`handIsSafe` DFS), gap-fill, no-flood, `ContextualGenerator` | next |
-| E2 | Fairness modes (guided/fair/seeded), assist-fade curve, guided rescue, daily seed | |
+| **E1** | Solvability floor (`handIsSafe` DFS), `ContextualGenerator`, no-flood, gap-fill | ✅ done |
+| E2 | Fairness modes (guided/fair/seeded), assist-fade curve, **Guided rescue rule + fill ceiling**, daily seed | next |
 | E3 | 40-level content, board elements, combo/specials, satchel, DDA | |
 | E4 | Economy, star-band resolution, streaks, monetization wiring | |
 | E5 | Canvas 2D UI (Claude Design) | |
 | E6 | Capacitor shell + AdMob | |
 | E7 | Simulation harness (CasualBot), CI gates G1–G16, difficulty calibration | |
+
+> E1 delivers **per-hand** safety (every hand has an out). The Guided **global** "un-losable" promise
+> (rescue rule + fill ceiling, spec `03 §4.3`) and the full N ≥ 1e6 zero-death certification (spec `07`)
+> land in E2/E7.
 
 ## Spec-reconciliation notes (from the build-readiness + decision audits)
 

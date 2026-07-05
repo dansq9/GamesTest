@@ -9,7 +9,9 @@ export { LEVELS, levelById } from './levels.ts';
 export * as board from './board.ts';
 export { scorePlacement } from './scoring.ts';
 export { applyTide, phaseFor, riseFor, TIDE_CAP } from './tide.ts';
-export { generateTray } from './generator.ts';
+export { generateTray, contextFor, type GenContext } from './generator.ts';
+export { handIsSafe, handCanClear, safeFallbackShapes } from './solvability.ts';
+export { assistFor, noFloodFor, type Assist } from './assist.ts';
 export {
   BOARD_SIZE,
   blankState,

@@ -142,10 +142,20 @@ Not "open" so much as **chosen by the sim harness** and stated for visibility (`
 
 ---
 
+## I. Onboarding & mode-feel decisions  *(owners: Product + Systems; raised by product owner)*
+
+| ID | Question | Recommendation | Src |
+|---|---|---|---|
+| ZN1 ★ | What makes **Zen** calmer — bigger targets (e.g. 5,000 → 100,000) or a different posture? | **Posture, not numbers.** Zen has **no goal target and no tide** (nothing to inflate), plus the **kindest generation** (strongest board-opening pressure dial + a light gap-fill aid). Calm = *absence of pressure systems*, never a longer grind at the same intensity. Implemented in `assist.ts` (`surface==='zen'` → `pressure 1.0, gapFill 0.3`); engine already gives zen no goal/tide. | engine `assist.ts`, `11` |
+| ONB1 ★ | Onboarding tutorial: what does it teach, and where does the player land after it? Do tide/elements appear in it? | **Teach only the universal mechanic** the scripted first session already covers (place → clear a vertical line → a horizontal → both → a full line yourself). **No tide, no elements, no goal in the tutorial** (non-negotiable #5, "one new concept at a time"). **Land the player in Voyage L1 (The Shallows)** — the un-losable L1–3 *are* the extended onboarding ramp. Tide is first taught at its designated voyage level (a survive level), each board element at its drip level (barnacle L11, coral L14, …) — never cold in the tutorial. **Unlock the Zen / Tide / Blitz free-play surfaces after Chapter 1 (L10)**, so the player learns on the guided voyage before choosing a surface. Engine support: the tutorial is host-driven scripted moves over a deterministic seed (or an injected deterministic generator stub, `02 §6`); no special "tutorial mode" in the engine. | `00 §5`, `01 §1`, `06`, `02 §6` |
+
+---
+
 ## What's needed before build vs. what the sim will settle
 
 - **Decide before E3–E4 (content):** the ★ items in C and D (element cuts, satchel shape, special debuts,
-  HUD split, deep-tide ease, milestone content) — they change what gets authored.
+  HUD split, deep-tide ease, milestone content) — they change what gets authored. ONB1's element/tide
+  drip already matches the authored order; ZN1 is implemented.
 - **Decide before E1–E2 (fairness/determinism):** B1–B5, B7.
 - **Business (any time before soft launch):** all $ items in E, plus D7, B8.
 - **The ○ items** are tuning the difficulty loop (`07 §3`) calibrates against the win-rate bands — ship the

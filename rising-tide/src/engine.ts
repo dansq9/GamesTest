@@ -5,9 +5,10 @@
  * no Math.random. `placePiece` is the single turn command; events are emitted in the canonical
  * order (spec 02 §3). Determinism: every draw flows through the one injected Rng in a frozen order.
  *
- * E0 SCOPE (spec 13): determinism skeleton — board, clearing, scoring, tide, goals (lines/score/
- * survive), refill, terminals, snapshot/restore. Elements, specials, DDA, star-band resolution,
- * gap-fill and the solvability floor arrive in later phases and are marked inline.
+ * SCOPE (spec 13): E0 determinism skeleton — board, clearing, scoring, tide, goals (lines/score/
+ * survive), refill, terminals, snapshot/restore. E1 adds the ContextualGenerator: per-hand safety
+ * floor, pressure dial, no-flood, gap-fill. Elements, specials, DDA, star-band resolution, and the
+ * Guided global rescue rule + fill ceiling arrive in later phases and are marked inline.
  */
 
 import { autoSeed, createRng, rngFromState, type Rng } from './rng.ts';
@@ -19,7 +20,7 @@ import {
   legalMoves as legalMovesFor,
   placeCells,
 } from './board.ts';
-import { generateTray } from './generator.ts';
+import { contextFor, generateTray, type GenContext } from './generator.ts';
 import { scorePlacement } from './scoring.ts';
 import { applyTide, TIDE_CAP } from './tide.ts';
 import { levelById } from './levels.ts';
@@ -72,7 +73,7 @@ export class RisingTideEngine {
     }
 
     // Opening tray (the first hand).
-    s.tray = generateTray(this.#rng);
+    s.tray = generateTray(this.#rng, s.board, this.#genCtx(s));
     s.hands = 1;
     s.rngCalls = this.#rng.calls;
 
@@ -178,7 +179,7 @@ export class RisingTideEngine {
 
     // 9. Refill only when all three are placed — new tray from the post-clear board.
     if (s.tray.every((p) => p.placed)) {
-      s.tray = generateTray(this.#rng);
+      s.tray = generateTray(this.#rng, s.board, this.#genCtx(s));
       s.hands++;
       events.push({ type: 'trayRefilled', tray: cloneTray(s.tray), deterministic: s.deterministic });
     }
@@ -246,6 +247,10 @@ export class RisingTideEngine {
     return this.#state.surface === 'tide' || this.#state.goal === 'survive';
   }
 
+  #genCtx(s: GameState): GenContext {
+    return contextFor(s.surface, s.fairness, this.#rng);
+  }
+
   // ── monetization hooks (spec 02 §8) ─────────────────────────────────────────
   grantMoves(n: number): Command {
     const s = this.#state;
@@ -280,7 +285,7 @@ export class RisingTideEngine {
       events.push({ type: 'continued', tideAfter: s.tide, reason: 'drowned' });
     } else if (s.lossReason === 'no-moves') {
       // E1 will force a GUARANTEED-SAFE tray here; E0 regenerates a normal tray.
-      s.tray = generateTray(this.#rng);
+      s.tray = generateTray(this.#rng, s.board, this.#genCtx(s));
       s.hands++;
       s.rngCalls = this.#rng.calls;
       s.status = 'playing';
@@ -296,7 +301,7 @@ export class RisingTideEngine {
     const s = this.#state;
     void opts;
     if (s.status !== 'playing') return { state: s, events: [] };
-    s.tray = generateTray(this.#rng);
+    s.tray = generateTray(this.#rng, s.board, this.#genCtx(s));
     s.rerolls++;
     s.rngCalls = this.#rng.calls;
     return { state: s, events: [{ type: 'trayRerolled', tray: cloneTray(s.tray), deterministic: s.deterministic }] };

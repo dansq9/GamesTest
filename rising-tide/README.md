@@ -28,14 +28,16 @@ npm test            # node:test over the type-stripped .ts suite
 npm run build       # tsc -> dist/ (compiled JS + declarations)
 ```
 
-## Status — E0–E2 + E3a/E3b/E3c complete (70 tests green)
+## Status — E0–E3 complete (80 tests green)
 
-**E0 ship criterion** (spec `13`): *seed ⇒ byte-identical game, proven by test.* ✅
-**E1 ship criterion** (spec `13`): *the safety floor — no unavoidable deaths.* ✅
-**E2 ship criterion** (spec `13`): *three fairness modes; Guided globally un-losable; seeded daily replay.* ✅
-**E3a** (slice of E3): *40-level table + all 7 goal types + core elements, all playable headless.* ✅
-**E3b** (slice of E3): *combo one-move grace + combo-earned specials + the two special blocks.* ✅
-**E3c** (slice of E3): *anchor locks + power-up satchel (Undo / +Moves / Tide-Push).* ✅
+**E0** (spec `13`): *seed ⇒ byte-identical game, proven by test.* ✅
+**E1** (spec `13`): *the safety floor — no unavoidable deaths.* ✅
+**E2** (spec `13`): *three fairness modes; Guided globally un-losable; seeded daily replay.* ✅
+**E3** (content): *40 levels, 7 goal types, elements, combos, specials, anchor locks, power-ups, DDA.* ✅
+- E3a: 40-level table + all 7 goal types + core elements (barnacle/coral/pearl/bonus).
+- E3b: combo one-move grace + combo-earned specials + the two special blocks.
+- E3c: anchor locks + power-up satchel (Undo / +Moves / Tide-Push).
+- E3d: the DDA system — player-adaptive difficulty, reconciled with determinism.
 
 Implemented and tested:
 - **RNG** (`rng.ts`) — mulberry32 + FNV-1a, integer-exact, the single randomness source. State-based
@@ -70,6 +72,12 @@ Implemented and tested:
 - **Power-ups** (E3c, spec `10 §3`) — the satchel: **Undo-Last** (one-deep rewind via
   snapshot/restore; disabled in Seeded), **+Moves** (grant 5), **Tide-Push** (lower tide by 2),
   used via `usePowerUp`.
+- **DDA** (E3d, spec `11`) — player-adaptive difficulty (`dda.ts`). Four behavioral signals
+  (`PlayerProfile`) drive three dials (gap-fill boost, pressure modulation, comfort mode after a
+  loss streak). Asymmetric — helps struggling players far more than it challenges strong ones — and
+  never touches the solvability floor. **Determinism-safe (audit B2):** the deltas are computed from
+  the profile *before* generation, frozen into `GameState.dda` (so snapshot/restore is exact), draw
+  nothing from the game RNG, and are forced neutral in Seeded. `same seed + same profile ⇒ same board`.
 - **Combos & specials** (E3b, spec `05`) — the **one-move grace** (a streak survives a single quiet
   setup move; `comboHeld`), **combo-earned specials** (×3 → Line-Blaster, ×6 → Bomb, ×10 → repeat,
   granted into a `satchel`; disabled in Seeded so shared boards stay identical), and the two
@@ -97,7 +105,8 @@ scale — the full N ≥ 1e6 CasualBot certification is E7.
 | **E3a** | 40-level table, 7 goal types, core elements (barnacle/coral/pearl/bonus) | ✅ done |
 | **E3b** | Combo one-move grace, special blocks (Line-Blaster, Bomb), combo-earned specials | ✅ done |
 | **E3c** | Anchor locks + power-up satchel (Undo / +Moves / Tide-Push) | ✅ done |
-| E3d | DDA system (player-adaptive difficulty), reconciled with determinism | next |
+| **E3d** | DDA system (player-adaptive difficulty), reconciled with determinism | ✅ done |
+| E4 | Economy, star-band resolution, streaks, monetization wiring | next |
 
 > Tier-B elements `current` (drift / tray-bias) and `storm` (turn-timed events) stay gated off until
 > the E7 headless sim certifies the safety floor holds with them present (spec `04 §1.6–1.7`).
@@ -137,6 +146,7 @@ match. Tracked so the spec and code stay in sync:
    boards; combo one-move grace + specials (E3b); `continueAfterLoss` on no-moves regenerates a normal
    tray (should be guaranteed-safe — cheap follow-up).
 
-Deferred audit blockers not touched by E0, for later phases: DDA↔determinism reconciliation (B2 — DDA
-inputs must live in serialized state or be off in seeded/ranked, per spec `11`); the ~10 E3 state fields
-for specials/satchel/elements (B3); and the L15 `collect`-over-coral content bug (B4).
+Audit blockers — all now resolved: **B1** RNG draw order (follow spec `03`); **B2** DDA↔determinism
+(deltas frozen in `GameState.dda`, no RNG draw, neutral in Seeded — E3d); **B3** the E3 state fields for
+specials/satchel/elements (added across E3); **B4** the L15 `collect`-over-coral bug (collect now counts
+coral, E3a).

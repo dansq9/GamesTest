@@ -15,6 +15,17 @@ export { handIsSafe, handCanClear, minEndFill, safeFallbackShapes } from './solv
 export { assistFor, noFloodFor, pGap, pressureForChapter, type Assist, type AssistInput } from './assist.ts';
 export { dailySeed, utcDateString } from './daily.ts';
 export {
+  computeDDA,
+  applyDda,
+  updateProfile,
+  startSession,
+  chapterWinRateTarget,
+  NEUTRAL_PROFILE,
+  NEUTRAL_DDA,
+  type PlayerProfile,
+  type DdaDeltas,
+} from './dda.ts';
+export {
   BOARD_SIZE,
   blankState,
   emptyBoard,

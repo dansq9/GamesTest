@@ -22,6 +22,7 @@ import {
   rowColCells,
 } from './board.ts';
 import { COLORS } from './pieces.ts';
+import { computeDDA, NEUTRAL_PROFILE } from './dda.ts';
 import { contextFor, generateTray, type GenContext } from './generator.ts';
 import { resolveClearedCells, resolveClears, seedElements, type ClearResolution } from './elements.ts';
 import { applyTide, TIDE_CAP } from './tide.ts';
@@ -67,6 +68,9 @@ export class RisingTideEngine {
     const level = config.level;
     const fairness: Fairness = level?.fairness ?? 'fair';
     const s = blankState(config.surface, fairness, seed, config.gamesPlayed ?? 0);
+    // Freeze the DDA deltas for this game (neutral in Seeded). Part of the reproducibility contract:
+    // same seed + same profile ⇒ same board (spec 11 §4).
+    s.dda = computeDDA(config.profile ?? NEUTRAL_PROFILE, level?.chapter, fairness);
 
     if (config.surface === 'voyage') {
       if (!level) throw new Error("newGame: surface 'voyage' requires a level");
@@ -315,6 +319,7 @@ export class RisingTideEngine {
       milestone: s.level?.milestone,
       teach: s.level?.teachAssist,
       gamesPlayed: s.gamesPlayed,
+      dda: s.dda,
       rng: this.#rng,
     });
   }

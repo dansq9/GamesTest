@@ -4,6 +4,7 @@
  */
 
 import type { ColorId } from './pieces.ts';
+import type { DdaDeltas, PlayerProfile } from './dda.ts';
 
 export type { ColorId };
 
@@ -104,6 +105,7 @@ export interface GameState {
   seed: string;
   gamesPlayed: number;
   rngCalls: number; // draw cursor (debug aid; resume uses rngState in SerializedGame)
+  dda: DdaDeltas; // FROZEN DDA deltas for this game — computed at newGame, part of reproducibility
 
   // board & hand
   board: Board;
@@ -166,6 +168,7 @@ export interface NewGameConfig {
   level?: LevelDef; // required for surface 'voyage'
   seed?: string; // omitted → engine mints + records an auto-seed
   gamesPlayed?: number;
+  profile?: PlayerProfile; // per-player DDA signals; omitted → neutral (no adaptation)
 }
 
 export const BOARD_SIZE = 8;
@@ -186,6 +189,7 @@ export function blankState(surface: Surface, fairness: Fairness, seed: string, g
     seed,
     gamesPlayed,
     rngCalls: 0,
+    dda: { gapFillBoost: 0, pressureAdjust: 0, comfortMode: false },
     board: emptyBoard(),
     tray: [],
     turns: 0,

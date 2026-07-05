@@ -12,6 +12,7 @@
  */
 
 import type { Fairness, Surface } from './state.ts';
+import { applyDda, NEUTRAL_DDA, type DdaDeltas } from './dda.ts';
 
 export interface Assist {
   gapFill: number; // guided slot-0 finisher gate probability (0 = off)
@@ -26,6 +27,7 @@ export interface AssistInput {
   milestone?: boolean;
   teach?: boolean; // level where the assist is the lesson (+teachBonus)
   gamesPlayed?: number; // lifetime; drives the endless/zen assist index
+  dda?: DdaDeltas; // frozen DDA deltas for the game (spec 11); omitted → neutral
 }
 
 /** Pressure-dial strength per chapter (spec 01 §3b). Never 0 — the anti-flood instinct stays on. */
@@ -63,19 +65,18 @@ function assistIndexFromGames(gamesPlayed = 0): number {
 }
 
 export function assistFor(input: AssistInput): Assist {
-  const pressure = pressureForChapter(input.chapter, input.surface);
+  const authoredPressure = pressureForChapter(input.chapter, input.surface);
+  const dda = input.dda ?? NEUTRAL_DDA;
 
-  // Zen: gentle, non-fading finisher aid (calm surface).
-  if (input.surface === 'zen') return { gapFill: 0.3, pressure };
+  // Zen: gentle, non-fading finisher aid (calm surface, no DDA).
+  if (input.surface === 'zen') return { gapFill: 0.3, pressure: authoredPressure };
 
-  // Guided voyage: the real fading curve keyed on level ordinal.
-  if (input.fairness === 'guided') {
-    const L = input.levelNumber ?? assistIndexFromGames(input.gamesPlayed);
-    return { gapFill: pGap(L, input.milestone, input.teach), pressure };
-  }
+  // Authored gap-fill: the fading curve in Guided; none in Fair/Seeded.
+  const authoredGapFill =
+    input.fairness === 'guided' ? pGap(input.levelNumber ?? assistIndexFromGames(input.gamesPlayed), input.milestone, input.teach) : 0;
 
-  // Fair / Seeded: no gap-fill help (Fair earns its wins; Seeded's fairness is sameness).
-  return { gapFill: 0, pressure };
+  // The DDA modulates the authored dials (neutral in Seeded → identical to authored).
+  return applyDda(authoredGapFill, authoredPressure, dda);
 }
 
 /** No-flood (never three ≥4-cell pieces) applies everywhere except pure Seeded (spec 03 §3). */

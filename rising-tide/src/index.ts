@@ -30,6 +30,7 @@ export {
   type LevelDef,
   type LossReason,
   type NewGameConfig,
+  type PowerUpId,
   type Reward,
   type SerializedGame,
   type SpecialId,

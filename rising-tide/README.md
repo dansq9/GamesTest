@@ -28,13 +28,14 @@ npm test            # node:test over the type-stripped .ts suite
 npm run build       # tsc -> dist/ (compiled JS + declarations)
 ```
 
-## Status — E0–E2 + E3a/E3b complete (60 tests green)
+## Status — E0–E2 + E3a/E3b/E3c complete (70 tests green)
 
 **E0 ship criterion** (spec `13`): *seed ⇒ byte-identical game, proven by test.* ✅
 **E1 ship criterion** (spec `13`): *the safety floor — no unavoidable deaths.* ✅
 **E2 ship criterion** (spec `13`): *three fairness modes; Guided globally un-losable; seeded daily replay.* ✅
 **E3a** (slice of E3): *40-level table + all 7 goal types + core elements, all playable headless.* ✅
 **E3b** (slice of E3): *combo one-move grace + combo-earned specials + the two special blocks.* ✅
+**E3c** (slice of E3): *anchor locks + power-up satchel (Undo / +Moves / Tide-Push).* ✅
 
 Implemented and tested:
 - **RNG** (`rng.ts`) — mulberry32 + FNV-1a, integer-exact, the single randomness source. State-based
@@ -60,10 +61,15 @@ Implemented and tested:
 - **Levels** (`levels.ts`) — the full **40-level voyage** (spec `01 §1`): 4 chapters, element drip,
   milestones, move budgets, per-level tide rates.
 - **Elements** (`elements.ts`) — deterministic seeding (drawn before the first tray, spread so no
-  line is pre-loaded) + element-aware clear resolution for the Tier-A cell/collectible elements:
-  **barnacle** (blocker→removed), **coral** (2-hit strike), **pearl** (collect), **bonus** (score
-  multiplier). Anchor + Tier-B `current`/`storm` are authored in the levels but their behavior is a
-  later E3 slice; those levels currently play as clean boards.
+  line is pre-loaded) + element-aware clear resolution for the Tier-A elements: **barnacle**
+  (blocker→removed), **coral** (2-hit strike), **pearl** (collect), **bonus** (score multiplier),
+  and **anchor** (E3c — cells locked from placement that also can't complete a line until they
+  unlock after K turns; protected from special blasts; integrated with the safety floor via
+  `canPlace`). Tier-B `current`/`storm` are authored in the levels but gated off until the E7 sim
+  pass (spec `04 §1.6–1.7`); those levels play as clean boards for now.
+- **Power-ups** (E3c, spec `10 §3`) — the satchel: **Undo-Last** (one-deep rewind via
+  snapshot/restore; disabled in Seeded), **+Moves** (grant 5), **Tide-Push** (lower tide by 2),
+  used via `usePowerUp`.
 - **Combos & specials** (E3b, spec `05`) — the **one-move grace** (a streak survives a single quiet
   setup move; `comboHeld`), **combo-earned specials** (×3 → Line-Blaster, ×6 → Bomb, ×10 → repeat,
   granted into a `satchel`; disabled in Seeded so shared boards stay identical), and the two
@@ -90,8 +96,11 @@ scale — the full N ≥ 1e6 CasualBot certification is E7.
 | **E2** | Fairness modes (guided/fair/seeded), assist-fade curve, **Guided rescue rule + fill ceiling**, daily seed | ✅ done |
 | **E3a** | 40-level table, 7 goal types, core elements (barnacle/coral/pearl/bonus) | ✅ done |
 | **E3b** | Combo one-move grace, special blocks (Line-Blaster, Bomb), combo-earned specials | ✅ done |
-| E3c | Anchor lock + Tier-B elements (current/storm), power-up satchel | next |
-| E3d | DDA system (player-adaptive difficulty), reconciled with determinism | |
+| **E3c** | Anchor locks + power-up satchel (Undo / +Moves / Tide-Push) | ✅ done |
+| E3d | DDA system (player-adaptive difficulty), reconciled with determinism | next |
+
+> Tier-B elements `current` (drift / tray-bias) and `storm` (turn-timed events) stay gated off until
+> the E7 headless sim certifies the safety floor holds with them present (spec `04 §1.6–1.7`).
 | E4 | Economy, star-band resolution, streaks, monetization wiring | |
 | E5 | Canvas 2D UI (Claude Design) | |
 | E6 | Capacitor shell + AdMob | |

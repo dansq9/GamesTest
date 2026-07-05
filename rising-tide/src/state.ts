@@ -16,6 +16,7 @@ export type Fairness = 'guided' | 'fair' | 'seeded';
 
 export type GoalType = 'lines' | 'multi' | 'combo' | 'survive' | 'score' | 'collect' | 'barnacle';
 export type SpecialId = 'lineBlaster' | 'bomb';
+export type PowerUpId = 'undo' | 'addMoves' | 'tidePush';
 export type Status = 'playing' | 'won' | 'lost';
 export type TidePhase = 'calm' | 'rising' | 'critical' | 'drowning';
 export type LossReason = 'no-moves' | 'drowned' | 'out-of-moves';
@@ -23,8 +24,12 @@ export type LossReason = 'no-moves' | 'drowned' | 'out-of-moves';
 export interface Cell {
   color: ColorId | ElementId;
   element?: ElementId;
-  /** coral2 durability, etc. (element data; unused until E3). */
+  /** coral2 durability (remaining strikes). */
   hits?: number;
+  /** anchor: cell is locked from placement and does NOT count toward line completion (spec 04 §1.4). */
+  locked?: boolean;
+  /** anchor: the turn count at/after which this locked cell unlocks. */
+  unlockTurn?: number;
 }
 
 /** 8×8, row-major. null = empty. */
@@ -87,6 +92,8 @@ export type GameEvent =
   | { type: 'continued'; tideAfter?: number; reason: 'drowned' | 'no-moves' }
   | { type: 'trayRerolled'; tray: TrayPiece[]; deterministic: boolean }
   | { type: 'tidePushed'; amount: number; newTide: number }
+  | { type: 'undone'; turns: number } // Undo-Last power-up restored the pre-placement state
+  | { type: 'powerUpUsed'; powerUp: PowerUpId }
   | { type: 'won'; stars: number; rewards: Reward[]; nextName?: string }
   | { type: 'lost'; reason: LossReason };
 
@@ -113,6 +120,7 @@ export interface GameState {
   totalLines: number;
   bestMulti: number; // most lines cleared in a single placement (drives the 'multi' goal)
   satchel: Record<SpecialId, number>; // earned specials awaiting deployment (spec 05 §3)
+  powerups: Record<PowerUpId, number>; // Undo-Last / +Moves / Tide-Push inventory (spec 10 §3)
 
   // tide
   tide: number;
@@ -190,6 +198,7 @@ export function blankState(surface: Surface, fairness: Fairness, seed: string, g
     totalLines: 0,
     bestMulti: 0,
     satchel: { lineBlaster: 0, bomb: 0 },
+    powerups: { undo: 0, addMoves: 0, tidePush: 0 },
     tide: 0,
     tidePhase: 'calm',
     tideRises: 0,

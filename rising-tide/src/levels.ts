@@ -18,7 +18,7 @@ const barnacle = (count: number): ElementSpec => ({ kind: 'barnacle', count });
 const coral = (count: number): ElementSpec => ({ kind: 'coral2', count });
 const pearl = (count: number): ElementSpec => ({ kind: 'pearl', count });
 const bonus = (count: number): ElementSpec => ({ kind: 'bonus', count });
-const anchor = (): ElementSpec => ({ kind: 'anchor', count: 1, params: { span: 1, turns: 5 } });
+const anchor = (count = 4): ElementSpec => ({ kind: 'anchor', count, params: { turns: 5 } });
 const current = (): ElementSpec => ({ kind: 'current', count: 1, params: { dir: 1, strength: 1 } });
 const storm = (): ElementSpec => ({ kind: 'storm', count: 1, params: { everyTurns: 8, magnitude: 3 } });
 

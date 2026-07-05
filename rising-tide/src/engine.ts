@@ -33,6 +33,7 @@ import {
   type GameState,
   type LevelDef,
   type NewGameConfig,
+  type PowerUpId,
   type Reward,
   type SerializedGame,
   type SpecialId,
@@ -50,6 +51,7 @@ type Command = { state: Readonly<GameState>; events: GameEvent[] };
 export class RisingTideEngine {
   #rng: Rng;
   #state: GameState;
+  #undoSnapshot: SerializedGame | null = null; // pre-last-placement capture for the Undo-Last power-up
 
   constructor() {
     // Placeholder rng/state until newGame; never used before newGame is called.
@@ -127,6 +129,9 @@ export class RisingTideEngine {
     if (s.status !== 'playing') return { state: s, events: [] };
     const piece = s.tray[pieceIdx];
     if (!piece || piece.placed || !this.#canPlacePiece(piece, r, c)) return { state: s, events: [] };
+
+    // Capture a one-deep undo point only when an Undo-Last is available (avoids per-move overhead).
+    this.#undoSnapshot = s.powerups.undo > 0 ? this.snapshot() : null;
 
     const events: GameEvent[] = [];
 
@@ -224,6 +229,9 @@ export class RisingTideEngine {
       }
     }
 
+    // 8b. Anchor unlocks (turn-based; a lock expires K turns after seeding).
+    this.#unlockAnchors(events);
+
     // 9. Goal progress.
     if (s.goal) {
       s.goalProgress = this.#goalProgressValue();
@@ -311,6 +319,23 @@ export class RisingTideEngine {
     });
   }
 
+  /** Unlock anchor cells whose lock has expired (turn-based, spec 04 §1.4). */
+  #unlockAnchors(events: GameEvent[]): void {
+    const s = this.#state;
+    const unlocked: [number, number][] = [];
+    for (let r = 0; r < s.board.length; r++) {
+      for (let c = 0; c < s.board.length; c++) {
+        const cell = s.board[r]![c];
+        if (cell?.locked && (cell.unlockTurn ?? Infinity) <= s.turns) {
+          s.board[r]![c] = null;
+          s.elements[r]![c] = null;
+          unlocked.push([r, c]);
+        }
+      }
+    }
+    if (unlocked.length > 0) events.push({ type: 'elementEvent', element: 'anchor', detail: { unlocked } });
+  }
+
   /** Grant combo-milestone specials into the satchel (spec 05 §1.4 ladder: ×3 LB, ×6 Bomb, ×10 LB). */
   #grantComboRewards(events: GameEvent[]): void {
     const s = this.#state;
@@ -356,6 +381,40 @@ export class RisingTideEngine {
     s.tray.push({ pieceId: special, cells: [[0, 0]], color, special, placed: false });
     s.rngCalls = this.#rng.calls;
     return { state: s, events: [{ type: 'specialDeployed', special, pieceIdx }] };
+  }
+
+  /**
+   * Use a satchel power-up (spec 10 §3): Undo-Last (rewind the last placement), +Moves (grant 5),
+   * Tide-Push (lower tide by 2). Consumes one from inventory. Undo is disabled in Seeded (rewinding
+   * the RNG would desync the shared board) and needs a captured undo point.
+   */
+  usePowerUp(kind: PowerUpId): Command {
+    const s = this.#state;
+    if (s.powerups[kind] <= 0) return { state: s, events: [] };
+
+    if (kind === 'undo') {
+      const snap = this.#undoSnapshot;
+      if (s.fairness === 'seeded' || !snap) return { state: s, events: [] };
+      const remainingUndo = s.powerups.undo - 1; // consume one (survives the restore below)
+      this.#undoSnapshot = null; // one-deep
+      this.restore(snap); // reverts board/score/rng to the pre-placement point
+      this.#state.powerups.undo = remainingUndo;
+      return { state: this.#state, events: [{ type: 'undone', turns: this.#state.turns }, { type: 'powerUpUsed', powerUp: 'undo' }] };
+    }
+
+    if (kind === 'addMoves') {
+      const revivable = s.status === 'lost' && s.lossReason === 'out-of-moves';
+      if (s.status !== 'playing' && !revivable) return { state: s, events: [] };
+      s.powerups.addMoves -= 1;
+      const cmd = this.grantMoves(5);
+      return { state: cmd.state, events: [{ type: 'powerUpUsed', powerUp: 'addMoves' }, ...cmd.events] };
+    }
+
+    // tidePush
+    if (s.status !== 'playing') return { state: s, events: [] };
+    s.powerups.tidePush -= 1;
+    const cmd = this.pushTide(2);
+    return { state: cmd.state, events: [{ type: 'powerUpUsed', powerUp: 'tidePush' }, ...cmd.events] };
   }
 
   pushTide(p: number): Command {

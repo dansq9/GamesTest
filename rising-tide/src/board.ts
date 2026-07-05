@@ -9,6 +9,11 @@ export function inBounds(r: number, c: number): boolean {
   return r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE;
 }
 
+/** A cell counts toward line completion iff it is filled AND not an anchor-locked cell (spec 04 §1.4). */
+export function isSolid(cell: Cell | null | undefined): boolean {
+  return cell != null && !cell.locked;
+}
+
 /** Absolute cells a piece occupies when its normalized cells are placed at origin (r, c). */
 export function absoluteCells(cells: ReadonlyArray<readonly [number, number]>, r: number, c: number): [number, number][] {
   return cells.map(([dr, dc]) => [r + dr, c + dc] as [number, number]);
@@ -71,12 +76,12 @@ export function findFullLines(board: Board): { rows: number[]; cols: number[] } 
   const rows: number[] = [];
   const cols: number[] = [];
   for (let r = 0; r < BOARD_SIZE; r++) {
-    if (board[r]!.every((cell) => cell !== null)) rows.push(r);
+    if (board[r]!.every((cell) => isSolid(cell))) rows.push(r);
   }
   for (let c = 0; c < BOARD_SIZE; c++) {
     let full = true;
     for (let r = 0; r < BOARD_SIZE; r++) {
-      if (board[r]![c] === null) {
+      if (!isSolid(board[r]![c])) {
         full = false;
         break;
       }

@@ -24,15 +24,17 @@ export const BONUS_MULT_CAP = 4; // spec 04 §1.5 stacking cap
 /** Fixed seed order (spec 04 §1.0). */
 const SEED_ORDER: ElementId[] = ['barnacle', 'coral2', 'anchor', 'bonus', 'pearl', 'current', 'storm'];
 
-/** Elements E3a actually seeds into the board/layer. */
+/** Elements seeded into the board/layer (E3a: barnacle/coral/pearl/bonus; E3c: anchor). */
 function isSeedable(kind: ElementId): boolean {
-  return kind === 'barnacle' || kind === 'coral2' || kind === 'pearl' || kind === 'bonus';
+  return kind === 'barnacle' || kind === 'coral2' || kind === 'pearl' || kind === 'bonus' || kind === 'anchor';
 }
 
-/** Whether a kind occupies (fills) the board cell (vs. an element-layer marker over an empty cell). */
+/** Whether a kind occupies (blocks) the board cell (vs. an element-layer marker over an empty cell). */
 function fillsBoard(kind: ElementId): boolean {
-  return kind === 'barnacle' || kind === 'coral2';
+  return kind === 'barnacle' || kind === 'coral2' || kind === 'anchor';
 }
+
+const ANCHOR_DEFAULT_TURNS = 5; // spec 04 §1.4 recommended K
 
 type ElementsLayer = (ElementId | null)[][];
 
@@ -61,7 +63,7 @@ export function seedElements(board: Board, elements: ElementsLayer, specs: reado
     for (let i = 0; i < spec.count; i++) {
       const cell = freeCell(board, elements, spec.kind, perRow, perCol, rng);
       if (!cell) break;
-      applySpec(board, elements, spec.kind, cell.r, cell.c);
+      applySpec(board, elements, spec.kind, cell.r, cell.c, spec.params);
       perRow[cell.r]!++;
       perCol[cell.c]!++;
     }
@@ -88,7 +90,7 @@ function freeCell(
   return null;
 }
 
-function applySpec(board: Board, elements: ElementsLayer, kind: ElementId, r: number, c: number): void {
+function applySpec(board: Board, elements: ElementsLayer, kind: ElementId, r: number, c: number, params?: Record<string, number>): void {
   switch (kind) {
     case 'barnacle':
       board[r]![c] = { color: 'barnacle', element: 'barnacle' };
@@ -104,8 +106,15 @@ function applySpec(board: Board, elements: ElementsLayer, kind: ElementId, r: nu
     case 'bonus':
       elements[r]![c] = 'bonus';
       break;
+    case 'anchor': {
+      // Locked cell: blocks placement and does not count toward line completion until turn K.
+      const turns = params?.turns ?? ANCHOR_DEFAULT_TURNS;
+      board[r]![c] = { color: 'anchor', element: 'anchor', locked: true, unlockTurn: turns };
+      elements[r]![c] = 'anchor';
+      break;
+    }
     default:
-      break; // anchor/current/storm deferred
+      break; // current/storm are Tier-B, gated off until the E7 sim pass (spec 04 §1.6–1.7)
   }
 }
 
@@ -146,6 +155,7 @@ export function resolveClearedCells(board: Board, elements: ElementsLayer, cells
       if (!want.has(r * BOARD_SIZE + c)) continue;
       const cell = nextBoard[r]![c];
       if (!cell) continue;
+      if (cell.locked) continue; // anchor-locked cells are protected from clears/blasts
 
       if (cell.element === 'coral2' && (cell.hits ?? 1) > 1) {
         const remaining = (cell.hits ?? 2) - 1;
